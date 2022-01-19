@@ -15,6 +15,3 @@ variable "LOCATION" {
 variable "TIME_ZONE" {
   default = "China Standard Time"
 }
-variable "FUNCTION_APP_CODE_FOLDER" {
-  default = "../AzureCloudLabEnvironmentFunctionApp/bin/Release/net6.0/publish/"
-}
