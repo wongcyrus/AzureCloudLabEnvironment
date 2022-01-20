@@ -48,7 +48,8 @@ module "func" {
   STORAGE_ACC_KEY           = azurerm_storage_account.storage.primary_access_key
   STORAGE_CONNECTION_STRING = azurerm_storage_account.storage.primary_blob_connection_string
   DEPLOYMENTS_NAME          = azurerm_storage_container.deployments.name
-  TIME_ZONE                 = var.TIME_ZONE
+  CALENDAR_TIME_ZONE        = var.CALENDAR_TIME_ZONE
+  CALENDAR_URL              = var.CALENDAR_URL
   depends_on                = [azurerm_resource_group.func-rg]
 }
 

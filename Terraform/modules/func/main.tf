@@ -7,7 +7,8 @@ variable "STORAGE_ACC_NAME" {}
 variable "STORAGE_ACC_KEY" {}
 variable "STORAGE_CONNECTION_STRING" {}
 variable "DEPLOYMENTS_NAME" {}
-variable "TIME_ZONE" {}
+variable "CALENDAR_TIME_ZONE" {}
+variable "CALENDAR_URL" {}
 variable "FUNCTION_APP_FOLDER" {
   default = "../../../AzureCloudLabEnvironmentFunctionApp"
 }
@@ -64,7 +65,8 @@ resource "azurerm_function_app" "func_function_app" {
     AzureWebJobsStorage            = var.STORAGE_CONNECTION_STRING,
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.func_application_insights.instrumentation_key,
     WEBSITE_RUN_FROM_PACKAGE       = "1"
-    WEBSITE_TIME_ZONE              = var.TIME_ZONE
+    CalendarUrl                    = var.CALENDAR_URL
+    CalendarTimeZone               = var.CALENDAR_TIME_ZONE
   }
   os_type                    = "linux"
   storage_account_name       = var.STORAGE_ACC_NAME

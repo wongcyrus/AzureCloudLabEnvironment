@@ -20,41 +20,38 @@ namespace AzureCloudLabEnvironment
     public class CalenderPollingFunction
     {
         [FunctionName(nameof(CalenderPollingFunction))]
-        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer, ExecutionContext context, ILogger log)
+        public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo myTimer, ExecutionContext context, ILogger logger)
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(context.FunctionAppDirectory)
                 .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables()
                 .Build();
-
-            var calendarSerializer = new CalendarSerializer();
-            //calendarSerializer
-            var url = new Uri("https://calendar.google.com/calendar/ical/ai28g3ticnn156spsve4k2t4fk%40group.calendar.google.com/private-a983a09afc269499a9bb6439563d03ce/basic.ics");
-            var calendar = await CalenderPollingFunction.LoadFromUriAsync(url);
-            var onGoingEvents = GetOnGoingEvents(log, calendar);
+            
+            var calendar = await CalenderPollingFunction.LoadFromUriAsync(new Uri(config["CalendarUrl"]));
+            var onGoingEvents = GetOnGoingEvents(calendar, config["CalendarTimeZone"], logger);
 
             var tableClient = GetTableClient(config);
             var newEvents = onGoingEvents.Where(c => IsNew(c, tableClient)).ToList();
             var endedEvents = GetEndedEvents(tableClient);
 
-            foreach (var newClass in newEvents) SaveNewEvent(newClass, tableClient);
-            foreach (var endedClass in endedEvents) DeleteEndedEvent(endedClass, tableClient);
+            foreach (var newClass in newEvents) SaveNewEvent(newClass, tableClient, logger);
+            foreach (var endedClass in endedEvents) DeleteEndedEvent(endedClass, tableClient, logger);
 
-            log.LogInformation("onGoingEvents:" + onGoingEvents.Count.ToString());
-            log.LogInformation($"CalenderPollingFunction Timer trigger function executed at: {DateTime.Now}");
+            logger.LogInformation("onGoingEvents:" + onGoingEvents.Count);
+            logger.LogInformation($"CalenderPollingFunction Timer trigger function executed at: {DateTime.Now}");
         }
 
 
-        private static List<OnGoingEvent> GetOnGoingEvents(ILogger log, IGetOccurrences calendar)
+        private static List<OnGoingEvent> GetOnGoingEvents(IGetOccurrences calendar, string calenderTimeZone, ILogger logger)
         {
             const double threshold = 0.5;
 
             var onGoingEvents = new List<OnGoingEvent>();
             var start = TimeZoneInfo.ConvertTime(DateTime.Now.AddMinutes(-threshold),
-                TimeZoneInfo.FindSystemTimeZoneById("China Standard Time"));
+                TimeZoneInfo.FindSystemTimeZoneById(calenderTimeZone));
             var end = TimeZoneInfo.ConvertTime(DateTime.Now.AddMinutes(threshold),
-                TimeZoneInfo.FindSystemTimeZoneById("China Standard Time"));
+                TimeZoneInfo.FindSystemTimeZoneById(calenderTimeZone));
             var startUtc = DateTime.UtcNow.AddMinutes(-threshold);
             var endUtc = DateTime.UtcNow.AddMinutes(threshold);
             var occurrencesRepeatedEvents = calendar.GetOccurrences(startUtc, endUtc);
@@ -96,7 +93,7 @@ namespace AzureCloudLabEnvironment
                         continue;
                 }
 
-                log.LogInformation(pk + description);
+                logger.LogInformation(pk + description);
                 pk = Regex.Replace(pk, @"[^0-9a-zA-Z]+", ",");
                 rk = Regex.Replace(rk, @"[^0-9a-zA-Z]+", ",");
                 onGoingEvents.Add(new OnGoingEvent()
@@ -133,10 +130,10 @@ namespace AzureCloudLabEnvironment
             return oDataQueryEntities.ToList();
         }
 
-        private static void SaveNewEvent(OnGoingEvent onGoingEvent, TableClient tableClient)
+        private static void SaveNewEvent(OnGoingEvent onGoingEvent, TableClient tableClient, ILogger logger)
         {
             tableClient.AddEntity(onGoingEvent);
-            Console.WriteLine("Saved " + onGoingEvent);
+            logger.LogInformation("Saved " + onGoingEvent);
         }
 
         private static TableClient GetTableClient(IConfigurationRoot config)
@@ -148,10 +145,10 @@ namespace AzureCloudLabEnvironment
             return tableClient;
         }
 
-        private static void DeleteEndedEvent(OnGoingEvent onGoingEvent, TableClient tableClient)
+        private static void DeleteEndedEvent(OnGoingEvent onGoingEvent, TableClient tableClient, ILogger logger)
         {
             tableClient.DeleteEntity(onGoingEvent.PartitionKey, onGoingEvent.RowKey);
-            Console.WriteLine("Deleted " + onGoingEvent);
+            logger.LogInformation("Deleted " + onGoingEvent);
         }
     }
 }

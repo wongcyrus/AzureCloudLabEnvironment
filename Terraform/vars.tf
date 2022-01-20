@@ -1,6 +1,7 @@
 # SECRETS, PLEASE PROVIDE THESE VALUES IN A TFVARS FILE
 variable "SUBSCRIPTION_ID" {}
 variable "TENANT_ID" {}
+variable "CALENDAR_URL" {}
 
 # GLOBAL VARIABLES
 variable "RESOURCE_GROUP" {
@@ -12,6 +13,7 @@ variable "ENVIRONMENT" {
 variable "LOCATION" {
   default = "EastAsia"
 }
-variable "TIME_ZONE" {
+variable "CALENDAR_TIME_ZONE" {
   default = "China Standard Time"
 }
+
