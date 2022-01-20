@@ -32,6 +32,11 @@ resource "azurerm_storage_container" "deployments" {
   container_access_type = "private"
 }
 
+resource "azurerm_storage_table" "example" {
+  name                 = "OnGoingEvent"
+  storage_account_name = azurerm_storage_account.storage.name
+}
+
 
 module "func" {
   source                    = "./modules/func"
