@@ -6,12 +6,12 @@ using Azure.Data.Tables;
 using Ical.Net;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
-using Ical.Net.Serialization;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Text.RegularExpressions;
 using Azure;
+using Azure.Storage.Queues;
 using AzureCloudLabEnvironment.Model;
 using Microsoft.Extensions.Configuration;
 
@@ -20,14 +20,14 @@ namespace AzureCloudLabEnvironment
     public class CalenderPollingFunction
     {
         [FunctionName(nameof(CalenderPollingFunction))]
-        public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo myTimer, ExecutionContext context, ILogger logger)
+        public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo timer, ExecutionContext context, ILogger logger)
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(context.FunctionAppDirectory)
                 .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables()
                 .Build();
-            
+
             var calendar = await CalenderPollingFunction.LoadFromUriAsync(new Uri(config["CalendarUrl"]));
             var onGoingEvents = GetOnGoingEvents(calendar, config["CalendarTimeZone"], logger);
 
@@ -35,8 +35,26 @@ namespace AzureCloudLabEnvironment
             var newEvents = onGoingEvents.Where(c => IsNew(c, tableClient)).ToList();
             var endedEvents = GetEndedEvents(tableClient);
 
-            foreach (var newClass in newEvents) SaveNewEvent(newClass, tableClient, logger);
-            foreach (var endedClass in endedEvents) DeleteEndedEvent(endedClass, tableClient, logger);
+            var startEventQueueClient = new QueueClient(config["AzureWebJobsStorage"], "start-event");
+            var endEventQueueClient = new QueueClient(config["AzureWebJobsStorage"], "end-event");
+
+            string Base64Encode(string plainText)
+            {
+                var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
+                return System.Convert.ToBase64String(plainTextBytes);
+            }
+
+            foreach (var newClass in newEvents)
+            {
+                await startEventQueueClient.SendMessageAsync(Base64Encode(newClass.Context.Trim()));
+                SaveNewEvent(newClass, tableClient, logger);
+            }
+
+            foreach (var endedClass in endedEvents)
+            {
+                await endEventQueueClient.SendMessageAsync(Base64Encode(endedClass.Context.Trim()));
+                DeleteEndedEvent(endedClass, tableClient, logger);
+            }
 
             logger.LogInformation("onGoingEvents:" + onGoingEvents.Count);
             logger.LogInformation($"CalenderPollingFunction Timer trigger function executed at: {DateTime.Now}");
