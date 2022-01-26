@@ -16,6 +16,7 @@ using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.Azure.WebJobs.Extensions.Http;
+using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 
 
@@ -32,8 +33,8 @@ namespace AzureCloudLabEnvironment
 
         [FunctionName("HttpTriggerCSharp")]
         public static async Task<IActionResult> HttpTriggerCSharp(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]
-            HttpRequest req, ILogger log)
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req, ILogger log,
+            ExecutionContext context)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
 
@@ -44,12 +45,8 @@ namespace AzureCloudLabEnvironment
 
             var azure = Microsoft.Azure.Management.Fluent.Azure.Authenticate(azureCredentials).WithDefaultSubscription();
 
-            // Get the resource group's region
-            IResourceGroup resGroup = azure.ResourceGroups.GetByName("azure-cloud-lab-environment-terraform");
-            Region azureRegion = resGroup.Region;
-            log.LogInformation(azureRegion.Name);
-
-            await CreateContainerGroupAsync(azure, "azure-cloud-lab-environment-terraform", "container", "busybox:latest", "demo");
+            var config = Common.Config(context);
+            await CreateContainerGroupAsync(azure, config, "azure-cloud-lab-environment-terraform", "container", "demo");
             string name = req.Query["name"];
 
             string requestBody = String.Empty;
@@ -69,15 +66,15 @@ namespace AzureCloudLabEnvironment
         /// Creates a container group with a single container.
         /// </summary>
         /// <param name="azure">An authenticated IAzure object.</param>
+        /// <param name="configurationRoot"></param>
         /// <param name="resourceGroupName">The name of the resource group in which to create the container group.</param>
         /// <param name="containerGroupName">The name of the container group to create.</param>
         /// <param name="containerImage">The container image name and tag, for example 'microsoft\aci-helloworld:latest'.</param>
         /// <param name="instanceId"></param>
-        private static async Task<string> CreateContainerGroupAsync(
-            IAzure azure,
+        private static async Task<string> CreateContainerGroupAsync(IAzure azure,
+            IConfigurationRoot config,
             string resourceGroupName,
             string containerGroupName,
-            string containerImage,
             string instanceId)
         {
             Console.WriteLine($"\nCreating container group '{containerGroupName}'...");
@@ -93,19 +90,38 @@ namespace AzureCloudLabEnvironment
                 await azure.ContainerGroups.DeleteByIdAsync(containerGroup.Id);
                 Console.WriteLine("Deleted");
             }
+
+            var commands = @"
+rm -rf AzureCloudLabInfrastructure/ || \
+git clone https://github.com/wongcyrus/AzureCloudLabInfrastructure || \
+echo $(pwd) || \
+cp terraform.tfvars AzureCloudLabInfrastructure/ || \
+cd AzureCloudLabInfrastructure && \
+echo $(pwd) || \
+terraform init && \
+terraform apply -auto-approve
+";
             containerGroup = azure.ContainerGroups.Define(containerGroupName)
                 .WithRegion(azureRegion)
                 .WithExistingResourceGroup(resourceGroupName)
                 .WithLinux()
-                .WithPublicImageRegistryOnly()
-                .WithoutVolume()
-                .DefineContainerInstance(containerGroupName)
-                .WithImage(containerImage)
-                .WithExternalTcpPort(20008)
+                .WithPrivateImageRegistry(config["AcrUrl"], config["AcrUserName"], config["AcrPassword"])
+                .DefineVolume("workspace")
+                .WithExistingReadWriteAzureFileShare("containershare")
+                .WithStorageAccountName(config["StorageAccountName"])
+                .WithStorageAccountKey(config["StorageAccountKey"])
+                .Attach()
+                .DefineContainerInstance("terraformcli")
+                .WithImage(config["AcrUrl"] + "/terraformazurecli:latest")
+                .WithExternalTcpPort(80)
                 .WithCpuCoreCount(1.0)
                 .WithMemorySizeInGB(3)
-                .WithEnvironmentVariable("instance", instanceId)
-                .WithStartingCommandLine("/bin/sh", "-c", "echo \"Hello World\"")
+                .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_ID", config["ARM_CLIENT_ID"])
+                .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_SECRET", config["ARM_CLIENT_SECRET"])
+                .WithEnvironmentVariableWithSecuredValue("ARM_SUBSCRIPTION_ID", config["ARM_SUBSCRIPTION_ID"])
+                .WithEnvironmentVariableWithSecuredValue("ARM_TENANT_ID", config["ARM_TENANT_ID"])
+                .WithStartingCommandLine("/bin/sh", "-c", commands)
+                .WithVolumeMountSetting("workspace", "/workspace")
                 .Attach()
                 .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
                 .WithDnsPrefix(containerGroupName)

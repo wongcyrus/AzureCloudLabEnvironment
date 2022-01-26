@@ -48,6 +48,11 @@ resource "azurerm_function_app" "func_function_app" {
     WEBSITE_RUN_FROM_PACKAGE       = "1"
     CalendarUrl                    = var.CALENDAR_URL
     CalendarTimeZone               = var.CALENDAR_TIME_ZONE
+    AcrUrl                         = azurerm_container_registry.acr.login_server
+    AcrUser                        = azurerm_container_registry.acr.admin_username
+    AcrPassword                    = azurerm_container_registry.acr.admin_password
+    StorageAccountName             = var.STORAGE_ACC_NAME
+    StorageAccountKey              = var.STORAGE_ACC_KEY
   }
   os_type                    = "linux"
   storage_account_name       = var.STORAGE_ACC_NAME
@@ -125,7 +130,7 @@ resource "azurerm_container_registry_task" "build_terraform_image_task" {
     context_path         = "https://github.com/wongcyrus/terraform-azure-cli#master"
     context_access_token = "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"
     image_names          = ["terraformazurecli:latest"]
-    arguments ={
+    arguments = {
       AZURE_CLI_VERSION = "2.32.0"
       TERRAFORM_VERSION = "1.1.4"
     }

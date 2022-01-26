@@ -53,6 +53,12 @@ resource "azurerm_storage_queue" "end_event" {
   storage_account_name = azurerm_storage_account.storage.name
 }
 
+resource "azurerm_storage_share" "container_share" {
+  name                 = "containershare"
+  storage_account_name = azurerm_storage_account.storage.name
+  quota                = 500
+}
+
 module "func" {
   source                    = "./modules/func"
   LOCATION                  = var.LOCATION

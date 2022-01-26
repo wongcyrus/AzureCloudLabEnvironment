@@ -22,11 +22,7 @@ namespace AzureCloudLabEnvironment
         [FunctionName(nameof(CalenderPollingFunction))]
         public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo timer, ExecutionContext context, ILogger logger)
         {
-            var config = new ConfigurationBuilder()
-                .SetBasePath(context.FunctionAppDirectory)
-                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                .AddEnvironmentVariables()
-                .Build();
+            var config = Common.Config(context);
 
             var calendar = await CalenderPollingFunction.LoadFromUriAsync(new Uri(config["CalendarUrl"]));
             var onGoingEvents = GetOnGoingEvents(calendar, config["CalendarTimeZone"], logger);
