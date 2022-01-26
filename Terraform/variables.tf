@@ -5,7 +5,7 @@ variable "CALENDAR_URL" {}
 
 # GLOBAL VARIABLES
 variable "RESOURCE_GROUP" {
-  default = "func-rg"
+  default = "azure-cloud-lab-environment"
 }
 variable "ENVIRONMENT" {
   default = "dev"

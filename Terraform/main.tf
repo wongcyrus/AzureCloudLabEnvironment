@@ -3,6 +3,12 @@ resource "azurerm_resource_group" "func-rg" {
   location = var.LOCATION
 }
 
+resource "azurerm_resource_group" "terraform-rg" {
+  name     = "${var.RESOURCE_GROUP}-terraform"
+  location = var.LOCATION
+}
+
+
 resource "random_string" "prefix" {
   length  = 4
   special = false
@@ -50,7 +56,7 @@ resource "azurerm_storage_queue" "end_event" {
 module "func" {
   source                    = "./modules/func"
   LOCATION                  = var.LOCATION
-  RESOURCE_GROUP            = var.RESOURCE_GROUP
+  RESOURCE_GROUP            = azurerm_resource_group.func-rg
   ENVIRONMENT               = var.ENVIRONMENT
   PREFIX                    = random_string.prefix.result
   STORAGE_ACC_NAME          = azurerm_storage_account.storage.name
