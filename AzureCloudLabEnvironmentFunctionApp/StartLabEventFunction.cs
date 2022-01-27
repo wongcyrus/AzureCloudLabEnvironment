@@ -3,7 +3,9 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Azure.Core;
 using Azure.Identity;
@@ -33,74 +35,71 @@ namespace AzureCloudLabEnvironment
 
         [FunctionName("HttpTriggerCSharp")]
         public static async Task<IActionResult> HttpTriggerCSharp(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req, ILogger log,
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]
+            HttpRequest req, ILogger log,
             ExecutionContext context)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
 
-            var defaultCredential = new DefaultAzureCredential();
-            var defaultToken = defaultCredential.GetToken(new TokenRequestContext(new[] { "https://management.azure.com/.default" })).Token;
-            var defaultTokenCredentials = new Microsoft.Rest.TokenCredentials(defaultToken);
-            var azureCredentials = new AzureCredentials(defaultTokenCredentials, defaultTokenCredentials, null, AzureEnvironment.AzureGlobalCloud);
+            var isCreate = !req.Query.ContainsKey("Delete");
 
-            var azure = Microsoft.Azure.Management.Fluent.Azure.Authenticate(azureCredentials).WithDefaultSubscription();
+            var defaultCredential = new DefaultAzureCredential();
+            var defaultToken = defaultCredential
+                .GetToken(new TokenRequestContext(new[] { "https://management.azure.com/.default" })).Token;
+            var defaultTokenCredentials = new Microsoft.Rest.TokenCredentials(defaultToken);
+            var azureCredentials = new AzureCredentials(defaultTokenCredentials, defaultTokenCredentials, null,
+                AzureEnvironment.AzureGlobalCloud);
+
+            var azure = Microsoft.Azure.Management.Fluent.Azure.Authenticate(azureCredentials)
+                .WithDefaultSubscription();
 
             var config = Common.Config(context);
-            await CreateContainerGroupAsync(azure, config, "azure-cloud-lab-environment-terraform", "container", "demo");
-            string name = req.Query["name"];
+            await RunTerraformWithContainerGroupAsync(azure, config,
+                "https://github.com/wongcyrus/AzureCloudLabInfrastructure", "main", isCreate, "container", "lab",
+                "123456789", new Dictionary<string, string>(){
+                    {"NAME", "Student1"},
+                });
 
-            string requestBody = String.Empty;
-            using (StreamReader streamReader = new StreamReader(req.Body))
-            {
-                requestBody = await streamReader.ReadToEndAsync();
-            }
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
 
-            return name != null
-                ? (ActionResult)new OkObjectResult($"Hello, {name}")
-                : new BadRequestObjectResult("Please pass a name on the query string or in the request body");
+            return new OkObjectResult($"Hello, {isCreate}");
         }
 
-        /// <summary>
-        /// Creates a container group with a single container.
-        /// </summary>
-        /// <param name="azure">An authenticated IAzure object.</param>
-        /// <param name="configurationRoot"></param>
-        /// <param name="resourceGroupName">The name of the resource group in which to create the container group.</param>
-        /// <param name="containerGroupName">The name of the container group to create.</param>
-        /// <param name="containerImage">The container image name and tag, for example 'microsoft\aci-helloworld:latest'.</param>
-        /// <param name="instanceId"></param>
-        private static async Task<string> CreateContainerGroupAsync(IAzure azure,
+
+        private static async Task<string> RunTerraformWithContainerGroupAsync(IAzure azure,
             IConfigurationRoot config,
-            string resourceGroupName,
+            string gitRepositoryUrl,
+            string branch,
+            bool isCreate,
             string containerGroupName,
-            string instanceId)
+            string lab,
+            string studentId, IDictionary<string, string> terraformVariables)
         {
             Console.WriteLine($"\nCreating container group '{containerGroupName}'...");
 
+            const string resourceGroupName = "azure-cloud-lab-environment-terraform";
+
             // Get the resource group's region
-            IResourceGroup resGroup = azure.ResourceGroups.GetByName(resourceGroupName);
+            IResourceGroup resGroup = await azure.ResourceGroups.GetByNameAsync(resourceGroupName);
             Region azureRegion = resGroup.Region;
 
-            var containerGroup = azure.ContainerGroups.GetByResourceGroup(resourceGroupName, containerGroupName);
+            var containerGroup = await azure.ContainerGroups.GetByResourceGroupAsync(resourceGroupName, containerGroupName);
             if (containerGroup != null)
             {
                 Console.WriteLine("Delete");
                 await azure.ContainerGroups.DeleteByIdAsync(containerGroup.Id);
                 Console.WriteLine("Deleted");
             }
+            Console.WriteLine("Create");
 
-            var commands = @"
-rm -rf AzureCloudLabInfrastructure/ || \
-git clone https://github.com/wongcyrus/AzureCloudLabInfrastructure || \
-echo $(pwd) || \
-cp terraform.tfvars AzureCloudLabInfrastructure/ || \
-cd AzureCloudLabInfrastructure && \
-echo $(pwd) || \
-terraform init && \
-terraform apply -auto-approve
-";
+            var scriptUrl = gitRepositoryUrl.Replace("github.com", "raw.githubusercontent.com") + "/" + branch + "/" + (isCreate
+                ? "deploy.sh"
+                : "undeploy.sh");
+
+            var commands = $"curl -s {scriptUrl} | bash";
+
+            terraformVariables.Add("LAB", lab);
+            terraformVariables.Add("STUDENT_ID", studentId);
+            var prefixTerraformVariables = terraformVariables.Select(item => ("TF_VAR_" + item.Key, item.Value)).ToDictionary(p => p.Item1, p => p.Item2);
             containerGroup = azure.ContainerGroups.Define(containerGroupName)
                 .WithRegion(azureRegion)
                 .WithExistingResourceGroup(resourceGroupName)
@@ -111,16 +110,19 @@ terraform apply -auto-approve
                 .WithStorageAccountName(config["StorageAccountName"])
                 .WithStorageAccountKey(config["StorageAccountKey"])
                 .Attach()
-                .DefineContainerInstance("terraformcli")
+                .DefineContainerInstance("terraformcli-" + studentId)
                 .WithImage(config["AcrUrl"] + "/terraformazurecli:latest")
                 .WithExternalTcpPort(80)
-                .WithCpuCoreCount(1.0)
-                .WithMemorySizeInGB(3)
+                .WithCpuCoreCount(0.25)
+                .WithMemorySizeInGB(0.5)
                 .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_ID", config["ARM_CLIENT_ID"])
                 .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_SECRET", config["ARM_CLIENT_SECRET"])
                 .WithEnvironmentVariableWithSecuredValue("ARM_SUBSCRIPTION_ID", config["ARM_SUBSCRIPTION_ID"])
                 .WithEnvironmentVariableWithSecuredValue("ARM_TENANT_ID", config["ARM_TENANT_ID"])
-                .WithStartingCommandLine("/bin/sh", "-c", commands)
+                .WithEnvironmentVariable("LAB", lab)
+                .WithEnvironmentVariable("STUDENT_ID", studentId)
+                .WithEnvironmentVariables(prefixTerraformVariables)
+                .WithStartingCommandLine("/bin/bash", "-c", commands)
                 .WithVolumeMountSetting("workspace", "/workspace")
                 .Attach()
                 .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
