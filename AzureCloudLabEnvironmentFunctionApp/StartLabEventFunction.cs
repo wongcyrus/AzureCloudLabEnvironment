@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -12,6 +11,7 @@ using Azure.Identity;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
+using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definition;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
@@ -19,7 +19,6 @@ using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json;
 
 
 namespace AzureCloudLabEnvironment
@@ -29,7 +28,6 @@ namespace AzureCloudLabEnvironment
         [FunctionName(nameof(StartLabEventFunction))]
         public void Run([QueueTrigger("start-event", Connection = "AzureWebJobsStorage")] Lab lab, ILogger log)
         {
-
             log.LogInformation($"StartLabEventFunction Queue trigger function processed: {lab}");
         }
 
@@ -50,16 +48,26 @@ namespace AzureCloudLabEnvironment
             var azureCredentials = new AzureCredentials(defaultTokenCredentials, defaultTokenCredentials, null,
                 AzureEnvironment.AzureGlobalCloud);
 
-            var azure = Microsoft.Azure.Management.Fluent.Azure.Authenticate(azureCredentials)
-                .WithDefaultSubscription();
+            var azure = await Microsoft.Azure.Management.Fluent.Azure.Authenticate(azureCredentials)
+                .WithDefaultSubscriptionAsync();
+            
+            var gitRepositoryUrl = "https://github.com/wongcyrus/AzureCloudLabInfrastructure";
+            var branch = "main";
+            var lab = "lab";
+            var terraformVariables = new Dictionary<string, string>()
+            {
+                {"NAME", "StudentRG"},
+            };
 
+            string[] studentIds = Enumerable.Range(1, 60).Select(x => $"{x:00000000}").ToArray();
+
+            var subStudentGroup = studentIds.Chunk(10);
+            terraformVariables.Add("LAB", lab);
             var config = Common.Config(context);
-            await RunTerraformWithContainerGroupAsync(azure, config,
-                "https://github.com/wongcyrus/AzureCloudLabInfrastructure", "main", isCreate, "container", "lab",
-                "123456789", new Dictionary<string, string>(){
-                    {"NAME", "Student1"},
-                });
-
+            var tasks = Enumerable.Range(0, subStudentGroup.Count())
+                .Select(i => RunTerraformWithContainerGroupAsync(azure, config,
+                    gitRepositoryUrl, branch, isCreate, "container-" + i + "-" + lab, lab, new Dictionary<string, string>(terraformVariables), subStudentGroup.ElementAt(i)));
+            await Task.WhenAll(tasks);
 
             return new OkObjectResult($"Hello, {isCreate}");
         }
@@ -72,7 +80,7 @@ namespace AzureCloudLabEnvironment
             bool isCreate,
             string containerGroupName,
             string lab,
-            string studentId, IDictionary<string, string> terraformVariables)
+            IDictionary<string, string> terraformVariables, string[] studentIds)
         {
             Console.WriteLine($"\nCreating container group '{containerGroupName}'...");
 
@@ -97,43 +105,74 @@ namespace AzureCloudLabEnvironment
 
             var commands = $"curl -s {scriptUrl} | bash";
 
-            terraformVariables.Add("LAB", lab);
-            terraformVariables.Add("STUDENT_ID", studentId);
-            var prefixTerraformVariables = terraformVariables.Select(item => ("TF_VAR_" + item.Key, item.Value)).ToDictionary(p => p.Item1, p => p.Item2);
-            containerGroup = azure.ContainerGroups.Define(containerGroupName)
-                .WithRegion(azureRegion)
-                .WithExistingResourceGroup(resourceGroupName)
-                .WithLinux()
-                .WithPrivateImageRegistry(config["AcrUrl"], config["AcrUserName"], config["AcrPassword"])
-                .DefineVolume("workspace")
-                .WithExistingReadWriteAzureFileShare("containershare")
-                .WithStorageAccountName(config["StorageAccountName"])
-                .WithStorageAccountKey(config["StorageAccountKey"])
-                .Attach()
-                .DefineContainerInstance("terraformcli-" + studentId)
-                .WithImage(config["AcrUrl"] + "/terraformazurecli:latest")
-                .WithExternalTcpPort(80)
-                .WithCpuCoreCount(0.25)
-                .WithMemorySizeInGB(0.5)
-                .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_ID", config["ARM_CLIENT_ID"])
-                .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_SECRET", config["ARM_CLIENT_SECRET"])
-                .WithEnvironmentVariableWithSecuredValue("ARM_SUBSCRIPTION_ID", config["ARM_SUBSCRIPTION_ID"])
-                .WithEnvironmentVariableWithSecuredValue("ARM_TENANT_ID", config["ARM_TENANT_ID"])
-                .WithEnvironmentVariable("LAB", lab)
-                .WithEnvironmentVariable("STUDENT_ID", studentId)
-                .WithEnvironmentVariables(prefixTerraformVariables)
-                .WithStartingCommandLine("/bin/bash", "-c", commands)
-                .WithVolumeMountSetting("workspace", "/workspace")
-                .Attach()
+            IWithVolume containerGroupWithVolume =
+                azure.ContainerGroups.Define(containerGroupName)
+               .WithRegion(azureRegion)
+               .WithExistingResourceGroup(resourceGroupName)
+               .WithLinux()
+               .WithPrivateImageRegistry(config["AcrUrl"], config["AcrUserName"], config["AcrPassword"])
+               .DefineVolume("workspace")
+               .WithExistingReadWriteAzureFileShare("containershare")
+               .WithStorageAccountName(config["StorageAccountName"])
+               .WithStorageAccountKey(config["StorageAccountKey"])
+               .Attach();
+
+            
+            IWithNextContainerInstance withNextContainerInstance = null;
+            for (var index = 0; index < studentIds.Length; index++)
+            {
+                var studentId = studentIds[index];
+                withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
+                    config, commands, lab, index, studentId, terraformVariables);
+            }
+
+            containerGroup = withNextContainerInstance
                 .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
                 .WithDnsPrefix(containerGroupName)
                 .Create();
             Console.WriteLine("Created");
-            // Create the container group
+
+            return containerGroup.Id;
+        }
 
 
-            Console.WriteLine($"Once DNS has propagated, container group '{containerGroup.Name}' will be reachable at http://{containerGroup.Fqdn}");
-            return containerGroup.IPAddress;
+        private static IWithNextContainerInstance AddContainerInstance(IWithVolume containerGroupWithVolume, IWithNextContainerInstance withNextContainerInstance, IConfigurationRoot config, string commands, string lab,
+int index, string studentId,
+            IDictionary<string, string> terraformVariables)
+        {
+            terraformVariables.Remove("STUDENT_ID");
+            terraformVariables.Add("STUDENT_ID", studentId);
+            var prefixTerraformVariables = terraformVariables.Select(item => ("TF_VAR_" + item.Key, item.Value)).ToDictionary(p => p.Item1, p => p.Item2);
+
+            IWithNextContainerInstance SetContainer(IContainerInstanceDefinitionBlank<IWithNextContainerInstance> container)
+            {
+                return container.WithImage(config["AcrUrl"] + "/terraformazurecli:latest")
+                    .WithExternalTcpPort(80 + index)
+                    .WithCpuCoreCount(0.25)
+                    .WithMemorySizeInGB(0.5)
+                    .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_ID", config["ARM_CLIENT_ID"])
+                    .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_SECRET", config["ARM_CLIENT_SECRET"])
+                    .WithEnvironmentVariableWithSecuredValue("ARM_SUBSCRIPTION_ID", config["ARM_SUBSCRIPTION_ID"])
+                    .WithEnvironmentVariableWithSecuredValue("ARM_TENANT_ID", config["ARM_TENANT_ID"])
+                    .WithEnvironmentVariable("LAB", lab)
+                    .WithEnvironmentVariable("STUDENT_ID", studentId)
+                    .WithEnvironmentVariables(prefixTerraformVariables)
+                    .WithStartingCommandLine("/bin/bash", "-c", commands)
+                    .WithVolumeMountSetting("workspace", "/workspace")
+                    .Attach();
+            }
+            //TODO: Remove Workaround for bug https://github.com/Azure/azure-libraries-for-net/issues/1275
+            IContainerInstanceDefinitionBlank<IWithNextContainerInstance> container;
+            if (withNextContainerInstance == null)
+            {
+                container = containerGroupWithVolume.DefineContainerInstance("terraformcli-" + studentId);
+            }
+            else
+            {
+                container = withNextContainerInstance.DefineContainerInstance("terraformcli-" + studentId);
+            }
+
+            return SetContainer(container);
         }
 
         private static void DeleteContainerGroup(IAzure azure, string resourceGroupName, string containerGroupName)
