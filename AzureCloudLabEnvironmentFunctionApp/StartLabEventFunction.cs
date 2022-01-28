@@ -46,15 +46,7 @@ namespace AzureCloudLabEnvironment
 
             var isCreate = !req.Query.ContainsKey("Delete");
 
-            var defaultCredential = new DefaultAzureCredential();
-            var defaultToken = defaultCredential
-                .GetToken(new TokenRequestContext(new[] { "https://management.azure.com/.default" })).Token;
-            var defaultTokenCredentials = new Microsoft.Rest.TokenCredentials(defaultToken);
-            var azureCredentials = new AzureCredentials(defaultTokenCredentials, defaultTokenCredentials, null,
-                AzureEnvironment.AzureGlobalCloud);
-
-            var azure = await Microsoft.Azure.Management.Fluent.Azure.Authenticate(azureCredentials)
-                .WithDefaultSubscriptionAsync();
+            var azure = await Common.GetAzure();
 
             var gitRepositoryUrl = "https://github.com/wongcyrus/AzureCloudLabInfrastructure";
             var branch = "main";
@@ -76,6 +68,7 @@ namespace AzureCloudLabEnvironment
 
             return new OkObjectResult($"Hello, {isCreate}");
         }
+
 
 
         private static async Task<string> RunTerraformWithContainerGroupAsync(IAzure azure,

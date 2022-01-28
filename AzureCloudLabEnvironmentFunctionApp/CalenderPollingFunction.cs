@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Azure.Data.Tables;
 using Ical.Net;
 using Ical.Net.CalendarComponents;
 using Ical.Net.DataTypes;
@@ -10,17 +9,16 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Azure;
 using Azure.Storage.Queues;
+using AzureCloudLabEnvironment.Dao;
 using AzureCloudLabEnvironment.Model;
-using Microsoft.Extensions.Configuration;
 
 namespace AzureCloudLabEnvironment
 {
     public class CalenderPollingFunction
     {
         [FunctionName(nameof(CalenderPollingFunction))]
-        public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo timer, ExecutionContext context,
+        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo timer, ExecutionContext context,
             ILogger logger)
         {
             var config = Common.Config(context);
@@ -28,9 +26,10 @@ namespace AzureCloudLabEnvironment
             var calendar = await CalenderPollingFunction.LoadFromUriAsync(new Uri(config["CalendarUrl"]));
             var onGoingEvents = GetOnGoingEvents(calendar, config["CalendarTimeZone"], logger);
 
-            var tableClient = GetTableClient(config);
-            var newEvents = onGoingEvents.Where(c => IsNew(c, tableClient)).ToList();
-            var endedEvents = GetEndedEvents(tableClient);
+            var onGoingEventDao = new OnGoingEventDao(config, logger);
+
+            var newEvents = onGoingEvents.Where(c => onGoingEventDao.IsNew(c)).ToList();
+            var endedEvents = onGoingEventDao.GetEndedEvents();
 
             var startEventQueueClient = new QueueClient(config["AzureWebJobsStorage"], "start-event");
             var endEventQueueClient = new QueueClient(config["AzureWebJobsStorage"], "end-event");
@@ -49,11 +48,11 @@ namespace AzureCloudLabEnvironment
                     StartTime = newClass.StartTime,
                     EndTime = newClass.EndTime,
                     Context = newClass.Context,
-                    RepeatTimes = GetRepeatCount(newClass, tableClient),
+                    RepeatTimes = onGoingEventDao.GetRepeatCount(newClass),
                     Type = "START"
                 };
                 await startEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
-                SaveNewEvent(newClass, tableClient, logger);
+                onGoingEventDao.SaveNewEvent(newClass);
             }
 
             foreach (var endedClass in endedEvents)
@@ -64,11 +63,11 @@ namespace AzureCloudLabEnvironment
                     StartTime = endedClass.StartTime,
                     EndTime = endedClass.EndTime,
                     Context = endedClass.Context,
-                    RepeatTimes = GetRepeatCount(endedClass, tableClient),
+                    RepeatTimes = onGoingEventDao.GetRepeatCount(endedClass),
                     Type = "END"
                 };
                 await endEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
-                DeleteEndedEvent(endedClass, tableClient, logger);
+                onGoingEventDao.DeleteEndedEvent(endedClass);
             }
 
             logger.LogInformation("onGoingEvents:" + onGoingEvents.Count);
@@ -143,47 +142,6 @@ namespace AzureCloudLabEnvironment
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadAsStringAsync();
             return Calendar.Load(result);
-        }
-
-        private static bool IsNew(OnGoingEvent onGoingEvent, TableClient tableClient)
-        {
-            Pageable<OnGoingEvent> oDataQueryEntities = tableClient.Query<OnGoingEvent>(
-                filter: TableClient.CreateQueryFilter($"PartitionKey eq {onGoingEvent.PartitionKey} and RowKey eq {onGoingEvent.RowKey}"));
-            return !oDataQueryEntities.Any();
-        }
-
-        private static int GetRepeatCount(OnGoingEvent onGoingEvent, TableClient tableClient)
-        {
-            Pageable<OnGoingEvent> oDataQueryEntities =
-                tableClient.Query<OnGoingEvent>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {onGoingEvent.PartitionKey}"));
-            return oDataQueryEntities.Count();
-        }
-
-        private static List<OnGoingEvent> GetEndedEvents(TableClient tableClient)
-        {
-            Pageable<OnGoingEvent> oDataQueryEntities = tableClient.Query<OnGoingEvent>(c => c.EndTime < DateTime.UtcNow);
-            return oDataQueryEntities.ToList();
-        }
-
-        private static void SaveNewEvent(OnGoingEvent onGoingEvent, TableClient tableClient, ILogger logger)
-        {
-            tableClient.AddEntity(onGoingEvent);
-            logger.LogInformation("Saved " + onGoingEvent);
-        }
-
-        private static TableClient GetTableClient(IConfigurationRoot config)
-        {
-            var connectionString = config["AzureWebJobsStorage"];
-            var tableClient = new TableClient(
-                connectionString,
-                nameof(OnGoingEvent));
-            return tableClient;
-        }
-
-        private static void DeleteEndedEvent(OnGoingEvent onGoingEvent, TableClient tableClient, ILogger logger)
-        {
-            tableClient.DeleteEntity(onGoingEvent.PartitionKey, onGoingEvent.RowKey);
-            logger.LogInformation("Deleted " + onGoingEvent);
         }
     }
 }
