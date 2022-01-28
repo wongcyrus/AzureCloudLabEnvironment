@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using Microsoft.Azure.Management.AppService.Fluent.Models;
 
 namespace AzureCloudLabEnvironment.Model
 {

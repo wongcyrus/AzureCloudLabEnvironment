@@ -20,7 +20,7 @@ namespace AzureCloudLabEnvironment
     public class CalenderPollingFunction
     {
         [FunctionName(nameof(CalenderPollingFunction))]
-        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo timer, ExecutionContext context,
+        public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo timer, ExecutionContext context,
             ILogger logger)
         {
             var config = Common.Config(context);

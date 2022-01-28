@@ -43,6 +43,18 @@ resource "azurerm_storage_table" "on_going_events" {
   storage_account_name = azurerm_storage_account.storage.name
 }
 
+resource "azurerm_storage_table" "lab_credential" {
+  name                 = "LabCredential"
+  storage_account_name = azurerm_storage_account.storage.name
+}
+
+
+resource "azurerm_storage_table" "subscriptions" {
+  name                 = "Subscription"
+  storage_account_name = azurerm_storage_account.storage.name
+}
+
+
 resource "azurerm_storage_queue" "start_event" {
   name                 = "start-event"
   storage_account_name = azurerm_storage_account.storage.name

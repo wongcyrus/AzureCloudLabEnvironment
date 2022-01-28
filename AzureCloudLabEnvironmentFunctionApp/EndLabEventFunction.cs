@@ -12,6 +12,7 @@ namespace AzureCloudLabEnvironment
             Lab lab = Lab.FromJson(ev.Context);
             log.LogInformation($"EndLabEventFunction Queue trigger function processed: {ev} => {lab}");
             if (lab == null) return;
+            lab.Name = ev.Title;
             lab.RepeatTimes = ev.RepeatTimes;
             log.LogInformation($"Start the lab: {lab}");
         }
