@@ -26,9 +26,13 @@ namespace AzureCloudLabEnvironment
     public class StartLabEventFunction
     {
         [FunctionName(nameof(StartLabEventFunction))]
-        public void Run([QueueTrigger("start-event", Connection = "AzureWebJobsStorage")] Lab lab, ILogger log)
+        public void Run([QueueTrigger("start-event", Connection = "AzureWebJobsStorage")] Event ev, ILogger log)
         {
-            log.LogInformation($"StartLabEventFunction Queue trigger function processed: {lab}");
+            Lab lab = Lab.FromJson(ev.Context);
+            log.LogInformation($"StartLabEventFunction Queue trigger function processed: {ev} => {lab}");
+            if (lab == null) return;
+            lab.RepeatTimes = ev.RepeatTimes;
+            log.LogInformation($"Start the lab: {lab}");
         }
 
         [FunctionName("HttpTriggerCSharp")]
@@ -50,7 +54,7 @@ namespace AzureCloudLabEnvironment
 
             var azure = await Microsoft.Azure.Management.Fluent.Azure.Authenticate(azureCredentials)
                 .WithDefaultSubscriptionAsync();
-            
+
             var gitRepositoryUrl = "https://github.com/wongcyrus/AzureCloudLabInfrastructure";
             var branch = "main";
             var lab = "lab";
@@ -117,7 +121,7 @@ namespace AzureCloudLabEnvironment
                .WithStorageAccountKey(config["StorageAccountKey"])
                .Attach();
 
-            
+
             IWithNextContainerInstance withNextContainerInstance = null;
             for (var index = 0; index < studentIds.Length; index++)
             {

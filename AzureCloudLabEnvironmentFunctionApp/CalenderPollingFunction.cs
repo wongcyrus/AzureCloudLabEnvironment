@@ -20,7 +20,8 @@ namespace AzureCloudLabEnvironment
     public class CalenderPollingFunction
     {
         [FunctionName(nameof(CalenderPollingFunction))]
-        public async Task Run([TimerTrigger("0 */15 * * * *")] TimerInfo timer, ExecutionContext context, ILogger logger)
+        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo timer, ExecutionContext context,
+            ILogger logger)
         {
             var config = Common.Config(context);
 
@@ -42,13 +43,31 @@ namespace AzureCloudLabEnvironment
 
             foreach (var newClass in newEvents)
             {
-                await startEventQueueClient.SendMessageAsync(Base64Encode(newClass.Context.Trim()));
+                var ev = new Event
+                {
+                    Title = newClass.PartitionKey,
+                    StartTime = newClass.StartTime,
+                    EndTime = newClass.EndTime,
+                    Context = newClass.Context,
+                    RepeatTimes = GetRepeatCount(newClass, tableClient),
+                    Type = "START"
+                };
+                await startEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
                 SaveNewEvent(newClass, tableClient, logger);
             }
 
             foreach (var endedClass in endedEvents)
             {
-                await endEventQueueClient.SendMessageAsync(Base64Encode(endedClass.Context.Trim()));
+                var ev = new Event
+                {
+                    Title = endedClass.PartitionKey,
+                    StartTime = endedClass.StartTime,
+                    EndTime = endedClass.EndTime,
+                    Context = endedClass.Context,
+                    RepeatTimes = GetRepeatCount(endedClass, tableClient),
+                    Type = "END"
+                };
+                await endEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
                 DeleteEndedEvent(endedClass, tableClient, logger);
             }
 
@@ -57,7 +76,8 @@ namespace AzureCloudLabEnvironment
         }
 
 
-        private static List<OnGoingEvent> GetOnGoingEvents(IGetOccurrences calendar, string calenderTimeZone, ILogger logger)
+        private static List<OnGoingEvent> GetOnGoingEvents(IGetOccurrences calendar, string calenderTimeZone,
+            ILogger logger)
         {
             const double threshold = 0.5;
 
@@ -75,14 +95,7 @@ namespace AzureCloudLabEnvironment
             occurrences.AddRange(occurrencesRepeatedEvents);
             occurrences.AddRange(occurrencesSingleEvents);
 
-            string GetPk(string summary, DateTime startTime, DateTime endTime)
-            {
-                return summary + " - From: " + startTime + " To: " + endTime;
-            }
-            string GetRk(string summary, DateTime startTime, DateTime endTime)
-            {
-                return $"{summary} - From: {startTime.ToLocalTime() } To: {endTime.ToLocalTime()} TimeZone: {TimeZoneInfo.Local.StandardName}";
-            }
+            string GetRowKey(string summary, DateTime startTime, DateTime endTime) => $"{summary} - From: {startTime.ToLocalTime()} To: {endTime.ToLocalTime()} TimeZone: {TimeZoneInfo.Local.StandardName}";
 
             foreach (var occurrence in occurrences)
             {
@@ -94,13 +107,13 @@ namespace AzureCloudLabEnvironment
                 switch (occurrence.Source)
                 {
                     case IRecurringComponent rc:
-                        pk = GetPk(rc.Summary, startTime, endTime);
-                        rk = GetRk(rc.Summary, startTime, endTime);
+                        pk = rc.Summary;
+                        rk = GetRowKey(rc.Summary, startTime, endTime);
                         description = rc.Description;
                         break;
                     case ICalendarComponent ev:
-                        pk = GetPk(ev.Properties["SUMMARY"].Value as string, startTime, endTime);
-                        rk = GetRk(ev.Properties["SUMMARY"].Value as string, startTime, endTime);
+                        pk = ev.Properties["SUMMARY"].Value as string;
+                        rk = GetRowKey(ev.Properties["SUMMARY"].Value as string, startTime, endTime);
                         description = ev.Properties["DESCRIPTION"].Value as string;
                         break;
                     default:
@@ -134,8 +147,16 @@ namespace AzureCloudLabEnvironment
 
         private static bool IsNew(OnGoingEvent onGoingEvent, TableClient tableClient)
         {
-            Pageable<OnGoingEvent> oDataQueryEntities = tableClient.Query<OnGoingEvent>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {onGoingEvent.PartitionKey}"));
+            Pageable<OnGoingEvent> oDataQueryEntities = tableClient.Query<OnGoingEvent>(
+                filter: TableClient.CreateQueryFilter($"PartitionKey eq {onGoingEvent.PartitionKey} and RowKey eq {onGoingEvent.RowKey}"));
             return !oDataQueryEntities.Any();
+        }
+
+        private static int GetRepeatCount(OnGoingEvent onGoingEvent, TableClient tableClient)
+        {
+            Pageable<OnGoingEvent> oDataQueryEntities =
+                tableClient.Query<OnGoingEvent>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {onGoingEvent.PartitionKey}"));
+            return oDataQueryEntities.Count();
         }
 
         private static List<OnGoingEvent> GetEndedEvents(TableClient tableClient)

@@ -7,9 +7,13 @@ namespace AzureCloudLabEnvironment
     public class EndLabEventFunction
     {
         [FunctionName(nameof(EndLabEventFunction))]
-        public void Run([QueueTrigger("start-event", Connection = "AzureWebJobsStorage")] Lab lab, ILogger log)
+        public void Run([QueueTrigger("end-event", Connection = "AzureWebJobsStorage")] Event ev, ILogger log)
         {
-            log.LogInformation($"EndLabEventFunction Queue trigger function processed: {lab}");
+            Lab lab = Lab.FromJson(ev.Context);
+            log.LogInformation($"EndLabEventFunction Queue trigger function processed: {ev} => {lab}");
+            if (lab == null) return;
+            lab.RepeatTimes = ev.RepeatTimes;
+            log.LogInformation($"Start the lab: {lab}");
         }
     }
 }
