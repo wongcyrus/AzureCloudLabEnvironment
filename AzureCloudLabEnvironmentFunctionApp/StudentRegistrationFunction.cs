@@ -3,14 +3,13 @@ using System.IO;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
+using AzureCloudLabEnvironment.Dao;
 using AzureCloudLabEnvironment.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
 
 
 namespace AzureCloudLabEnvironment
@@ -81,29 +80,21 @@ namespace AzureCloudLabEnvironment
                 }
 
                 var config = Common.Config(context);
-                var connectionString = config["AzureWebJobsStorage"];
-
-                var storageAccount = CloudStorageAccount.Parse(connectionString);
-                var cloudTableClient = storageAccount.CreateCloudTableClient();
-                var credentialsTable = cloudTableClient.GetTableReference(nameof(LabCredential));
-                var subscriptionTable = cloudTableClient.GetTableReference(nameof(Subscription));
-
                 var credential = ReadToObject(credentialJsonString);
 
-                var result = await subscriptionTable.ExecuteAsync(TableOperation.Retrieve<Subscription>(lab, subscriptionId));
-
-                Console.WriteLine(result.Result);
-                if (result.Result != null && ((Subscription)result.Result).Email != email.ToLower().Trim())
-                {
-                    return GetContentResult("You can only have one Subscription Id for one lab!");
-                }
+                var subscriptionDao = new SubscriptionDao(config, log);
                 var subscription = new Subscription()
                 {
                     PartitionKey = lab,
                     RowKey = subscriptionId,
                     Email = email
                 };
-                await subscriptionTable.ExecuteAsync(TableOperation.InsertOrReplace(subscription));
+                if (!subscriptionDao.IsNew(subscription))
+                {
+                    return GetContentResult("You can only have one Subscription Id for one lab!");
+                }
+                subscriptionDao.Save(subscription);
+
 
                 var labCredential = new LabCredential()
                 {
@@ -115,9 +106,12 @@ namespace AzureCloudLabEnvironment
                     Password = credential.password,
                     Tenant = credential.tenant
                 };
-                await credentialsTable.ExecuteAsync(TableOperation.InsertOrReplace(labCredential));
 
-                return GetContentResult("Your credentials has been " + (result.Result != null ? "Updated!" : "Registered!"));
+                var labCredentialDao = new LabCredentialDao(config, log);
+                var result = labCredentialDao.Save(labCredential);
+
+
+                return GetContentResult("Your credentials has been " + (result ? "Updated!" : "Registered!"));
             }
 
             return new OkObjectResult("ok");

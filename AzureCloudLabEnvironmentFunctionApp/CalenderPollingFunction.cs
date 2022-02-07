@@ -52,7 +52,7 @@ namespace AzureCloudLabEnvironment
                     Type = "START"
                 };
                 await startEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
-                onGoingEventDao.SaveNewEvent(newClass);
+                onGoingEventDao.Save(newClass);
             }
 
             foreach (var endedClass in endedEvents)
@@ -67,7 +67,7 @@ namespace AzureCloudLabEnvironment
                     Type = "END"
                 };
                 await endEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
-                onGoingEventDao.DeleteEndedEvent(endedClass);
+                onGoingEventDao.Delete(endedClass);
             }
 
             logger.LogInformation("onGoingEvents:" + onGoingEvents.Count);
