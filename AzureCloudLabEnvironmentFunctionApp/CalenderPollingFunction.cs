@@ -57,6 +57,7 @@ namespace AzureCloudLabEnvironment
 
             foreach (var endedClass in endedEvents)
             {
+                //TODO: FIX GetRepeatCount logic as deleted event does not count!
                 var ev = new Event
                 {
                     Title = endedClass.PartitionKey,
@@ -128,7 +129,7 @@ namespace AzureCloudLabEnvironment
                     RowKey = rk,
                     StartTime = startTime,
                     EndTime = endTime,
-                    Context = description
+                    Context = description,
                 });
             }
 

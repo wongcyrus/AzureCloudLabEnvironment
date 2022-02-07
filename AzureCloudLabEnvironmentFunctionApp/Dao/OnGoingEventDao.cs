@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace AzureCloudLabEnvironment.Dao
 {
 
-    internal class OnGoingEventDao: Dao<OnGoingEvent>
+    internal class OnGoingEventDao : Dao<OnGoingEvent>
     {
 
         public OnGoingEventDao(IConfigurationRoot config, ILogger logger) : base(config, logger)
@@ -20,7 +20,7 @@ namespace AzureCloudLabEnvironment.Dao
         public int GetRepeatCount(OnGoingEvent onGoingEvent)
         {
             Pageable<OnGoingEvent> oDataQueryEntities =
-                TableClient.Query<OnGoingEvent>(filter: TableClient.CreateQueryFilter($"PartitionKey eq {onGoingEvent.PartitionKey}"));
+                TableClient.Query<OnGoingEvent>(c => c.PartitionKey == onGoingEvent.PartitionKey);
             return oDataQueryEntities.Count();
         }
 
@@ -29,7 +29,5 @@ namespace AzureCloudLabEnvironment.Dao
             Pageable<OnGoingEvent> oDataQueryEntities = TableClient.Query<OnGoingEvent>(c => c.EndTime < DateTime.UtcNow);
             return oDataQueryEntities.ToList();
         }
-
- 
     }
 }

@@ -75,6 +75,7 @@ namespace AzureCloudLabEnvironment
                 {
                     return GetContentResult("Missing Data and Registration Failed!");
                 }
+                email = email.Trim().ToLower();
                 var isValidSubscriptionId = Guid.TryParse(subscriptionId, out var guidOutput);
                 if (!isValidSubscriptionId)
                 {
@@ -107,10 +108,11 @@ namespace AzureCloudLabEnvironment
                     DisplayName = credential.displayName,
                     Password = credential.password,
                     Tenant = credential.tenant,
-                    SubscriptionId = subscriptionId
+                    SubscriptionId = subscriptionId,
+                    Email = email
                 };
 
-                if (await Common.CheckValidSubscriptionContributorRole(labCredential, subscriptionId))
+                if (!await Common.IsValidSubscriptionContributorRole(labCredential, subscriptionId))
                 {
                     return GetContentResult("Your services principal is not in the contributor role for your subscription! Check your subscription ID and Services principal!");
                 }

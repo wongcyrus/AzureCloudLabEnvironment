@@ -10,6 +10,7 @@ namespace AzureCloudLabEnvironment.Model
         public string RowKey { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
+        
         public string Context { get; set; }
         public DateTimeOffset? Timestamp { get; set; }
         public ETag ETag { get; set; }
