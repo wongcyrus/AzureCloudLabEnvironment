@@ -1,3 +1,5 @@
 **/temp_infra/*
 .vs/*
 Terraform/__azurite_db*.json
+Terraform/__blobstorage__*
+Terraform/__queuestorage__*

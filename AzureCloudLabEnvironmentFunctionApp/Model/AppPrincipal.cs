@@ -2,6 +2,7 @@
 
 namespace AzureCloudLabEnvironment.Model
 {
+    // ReSharper disable InconsistentNaming
     [DataContract]
     public class AppPrincipal
     {

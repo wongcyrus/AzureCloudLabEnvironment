@@ -11,6 +11,8 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
 
+using Microsoft.Azure.Management.Fluent;
+
 
 namespace AzureCloudLabEnvironment
 {
@@ -80,9 +82,11 @@ namespace AzureCloudLabEnvironment
                 }
 
                 var config = Common.Config(context);
+                var subscriptionDao = new SubscriptionDao(config, log);
+                var labCredentialDao = new LabCredentialDao(config, log);
+
                 var credential = ReadToObject(credentialJsonString);
 
-                var subscriptionDao = new SubscriptionDao(config, log);
                 var subscription = new Subscription()
                 {
                     PartitionKey = lab,
@@ -93,8 +97,6 @@ namespace AzureCloudLabEnvironment
                 {
                     return GetContentResult("You can only have one Subscription Id for one lab!");
                 }
-                subscriptionDao.Save(subscription);
-
 
                 var labCredential = new LabCredential()
                 {
@@ -104,14 +106,19 @@ namespace AzureCloudLabEnvironment
                     AppId = credential.appId,
                     DisplayName = credential.displayName,
                     Password = credential.password,
-                    Tenant = credential.tenant
+                    Tenant = credential.tenant,
+                    SubscriptionId = subscriptionId
                 };
 
-                var labCredentialDao = new LabCredentialDao(config, log);
-                var result = labCredentialDao.Save(labCredential);
+                if (await Common.CheckValidSubscriptionContributorRole(labCredential, subscriptionId))
+                {
+                    return GetContentResult("Your services principal is not in the contributor role for your subscription! Check your subscription ID and Services principal!");
+                }
 
+                subscriptionDao.Add(subscription);
+                labCredentialDao.Upsert(labCredential);
 
-                return GetContentResult("Your credentials has been " + (result ? "Updated!" : "Registered!"));
+                return GetContentResult("Your credentials has been Registered!");
             }
 
             return new OkObjectResult("ok");

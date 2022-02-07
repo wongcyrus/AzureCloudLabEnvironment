@@ -52,7 +52,7 @@ namespace AzureCloudLabEnvironment
                     Type = "START"
                 };
                 await startEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
-                onGoingEventDao.Save(newClass);
+                onGoingEventDao.Add(newClass);
             }
 
             foreach (var endedClass in endedEvents)
