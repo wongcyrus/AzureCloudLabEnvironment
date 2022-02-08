@@ -3,11 +3,11 @@ using Microsoft.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AzureCloudLabEnvironment.Dao;
+using AzureCloudLabEnvironment.Helper;
 using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definition;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
@@ -15,7 +15,6 @@ using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.Azure.WebJobs;
-using Microsoft.Extensions.Configuration;
 
 
 namespace AzureCloudLabEnvironment
@@ -48,7 +47,7 @@ namespace AzureCloudLabEnvironment
 
         private static async Task RunClassInfrastructure(ILogger log, ExecutionContext context, Lab lab, bool isCreate)
         {
-            var config = Common.Config(context);
+            var config = new Config(context);
             var labCredentialDao = new LabCredentialDao(config, log);
 
             var students = labCredentialDao.GetByLab(lab.Name);
@@ -65,7 +64,7 @@ namespace AzureCloudLabEnvironment
             {
                 return "container-" + i + "-" + Regex.Replace(labName, @"[^0-9a-zA-Z]+", "-").Trim();
             };
-
+            
             var tasks = Enumerable.Range(0, subStudentGroup.Count())
                 .Select(i => RunTerraformWithContainerGroupAsync(config,
                     lab.TerraformRepo, lab.Branch, isCreate, GetContainerGroupName(i, lab.Name),
@@ -74,7 +73,7 @@ namespace AzureCloudLabEnvironment
         }
 
         private static async Task<string> RunTerraformWithContainerGroupAsync(
-            IConfigurationRoot config,
+            Config config,
             string gitRepositoryUrl,
             string branch,
             bool isCreate,
@@ -82,8 +81,8 @@ namespace AzureCloudLabEnvironment
             IDictionary<string, string> terraformVariables, LabCredential[] labCredentials)
         {
             Console.WriteLine($"Creating container group '{containerGroupName}'...");
-            string resourceGroupName = config["TerraformResourceGroupName"];
-            var azure = await Common.GetAzure();
+            string resourceGroupName = config.GetConfig(Config.Key.TerraformResourceGroupName);
+            var azure = await Helper.Azure.Get();
             // Get the resource group's region
             IResourceGroup resGroup = await azure.ResourceGroups.GetByNameAsync(resourceGroupName);
             Region azureRegion = resGroup.Region;
@@ -104,16 +103,16 @@ namespace AzureCloudLabEnvironment
             var commands = $"curl -s {scriptUrl} | bash";
 
 
-            IWithVolume containerGroupWithVolume =
+            var containerGroupWithVolume =
                 azure.ContainerGroups.Define(containerGroupName)
                .WithRegion(azureRegion)
                .WithExistingResourceGroup(resourceGroupName)
                .WithLinux()
-               .WithPrivateImageRegistry(config["AcrUrl"], config["AcrUserName"], config["AcrPassword"])
+               .WithPrivateImageRegistry(config.GetConfig(Config.Key.AcrUrl), config.GetConfig(Config.Key.AcrUserName), config.GetConfig(Config.Key.AcrPassword))
                .DefineVolume("workspace")
                .WithExistingReadWriteAzureFileShare("containershare")
-               .WithStorageAccountName(config["StorageAccountName"])
-               .WithStorageAccountKey(config["StorageAccountKey"])
+               .WithStorageAccountName(config.GetConfig(Config.Key.StorageAccountName))
+               .WithStorageAccountKey(config.GetConfig(Config.Key.StorageAccountKey))
                .Attach();
 
 
@@ -134,7 +133,7 @@ namespace AzureCloudLabEnvironment
         }
 
 
-        private static IWithNextContainerInstance AddContainerInstance(IWithVolume containerGroupWithVolume, IWithNextContainerInstance withNextContainerInstance, IConfigurationRoot config, string commands,
+        private static IWithNextContainerInstance AddContainerInstance(IWithVolume containerGroupWithVolume, IWithNextContainerInstance withNextContainerInstance, Config config, string commands,
 int index, LabCredential labCredential,
             IDictionary<string, string> terraformVariables)
         {
@@ -145,7 +144,7 @@ int index, LabCredential labCredential,
 
             IWithNextContainerInstance SetContainer(IContainerInstanceDefinitionBlank<IWithNextContainerInstance> container)
             {
-                return container.WithImage(config["AcrUrl"] + "/terraformazurecli:latest")
+                return container.WithImage(config.GetConfig(Config.Key.AcrUrl) + "/terraformazurecli:latest")
                     .WithExternalTcpPort(80 + index)
                     .WithMemorySizeInGB(0.5)
                     .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_ID", labCredential.AppId)

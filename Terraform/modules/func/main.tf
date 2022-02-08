@@ -54,11 +54,15 @@ resource "azurerm_function_app" "func_function_app" {
     CalendarUrl                    = var.CALENDAR_URL
     CalendarTimeZone               = var.CALENDAR_TIME_ZONE
     AcrUrl                         = azurerm_container_registry.acr.login_server
-    AcrUserName                        = azurerm_container_registry.acr.admin_username
+    AcrUserName                    = azurerm_container_registry.acr.admin_username
     AcrPassword                    = azurerm_container_registry.acr.admin_password
     TerraformResourceGroupName     = azurerm_resource_group.terraform-rg.name
     StorageAccountName             = var.STORAGE_ACC_NAME
     StorageAccountKey              = var.STORAGE_ACC_KEY
+    Smtp                           = var.SMTP
+    EmailUserName                  = var.EMAIL_USERNAME
+    EmailPassword                  = var.EMAIL_PASSWORD
+    EmailFromAddress               = var.EMAIL_FROM_ADDRESS
   }
   os_type                    = "linux"
   storage_account_name       = var.STORAGE_ACC_NAME

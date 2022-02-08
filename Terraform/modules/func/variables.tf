@@ -9,6 +9,10 @@ variable "STORAGE_CONNECTION_STRING" {}
 variable "DEPLOYMENTS_NAME" {}
 variable "CALENDAR_TIME_ZONE" {}
 variable "CALENDAR_URL" {}
+variable "SMTP" {}
+variable "EMAIL_USERNAME" {}
+variable "EMAIL_PASSWORD" {}
+variable "EMAIL_FROM_ADDRESS" {}
 variable "FUNCTION_APP_FOLDER" {
   default = "../../../AzureCloudLabEnvironmentFunctionApp"
 }

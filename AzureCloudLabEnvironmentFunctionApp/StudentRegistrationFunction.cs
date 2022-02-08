@@ -4,14 +4,13 @@ using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading.Tasks;
 using AzureCloudLabEnvironment.Dao;
+using AzureCloudLabEnvironment.Helper;
 using AzureCloudLabEnvironment.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
-
-using Microsoft.Azure.Management.Fluent;
 
 
 namespace AzureCloudLabEnvironment
@@ -82,7 +81,7 @@ namespace AzureCloudLabEnvironment
                     return GetContentResult("Invalid Subscription ID format and Registration Failed!");
                 }
 
-                var config = Common.Config(context);
+                var config = new Config(context);
                 var subscriptionDao = new SubscriptionDao(config, log);
                 var labCredentialDao = new LabCredentialDao(config, log);
 
@@ -112,7 +111,7 @@ namespace AzureCloudLabEnvironment
                     Email = email
                 };
 
-                if (!await Common.IsValidSubscriptionContributorRole(labCredential, subscriptionId))
+                if (!await Helper.Azure.IsValidSubscriptionContributorRole(labCredential, subscriptionId))
                 {
                     return GetContentResult("Your services principal is not in the contributor role for your subscription! Check your subscription ID and Services principal!");
                 }

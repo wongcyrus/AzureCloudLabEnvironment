@@ -5,22 +5,12 @@ using AzureCloudLabEnvironment.Model;
 using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Authentication;
-using Microsoft.Azure.WebJobs;
-using Microsoft.Extensions.Configuration;
 
-namespace AzureCloudLabEnvironment
+namespace AzureCloudLabEnvironment.Helper
 {
-    internal static class Common
+    internal static class Azure
     {
-        public static IConfigurationRoot Config(ExecutionContext context)
-        {
-            return new ConfigurationBuilder()
-                .SetBasePath(context.FunctionAppDirectory)
-                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                .AddEnvironmentVariables()
-                .Build();
-        }
-        public static async Task<IAzure> GetAzure()
+        public static async Task<IAzure> Get()
         {
             var defaultCredential = new DefaultAzureCredential();
             var defaultToken = (await defaultCredential

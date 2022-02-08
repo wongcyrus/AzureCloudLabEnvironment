@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using Azure;
 using Azure.Storage.Queues;
 using AzureCloudLabEnvironment.Dao;
+using AzureCloudLabEnvironment.Helper;
 using AzureCloudLabEnvironment.Model;
 
 namespace AzureCloudLabEnvironment
@@ -28,10 +29,10 @@ namespace AzureCloudLabEnvironment
                 return;
             }
 
-            var config = Common.Config(context);
-
-            var calendar = await LoadFromUriAsync(new Uri(config["CalendarUrl"]));
-            var onGoingEvents = GetOnGoingEvents(calendar, config["CalendarTimeZone"], logger);
+            var config = new Config(context);
+            
+            var calendar = await LoadFromUriAsync(new Uri(config.GetConfig(Config.Key.CalendarUrl)));
+            var onGoingEvents = GetOnGoingEvents(calendar, config.GetConfig(Config.Key.CalendarTimeZone), logger);
 
             var onGoingEventDao = new OnGoingEventDao(config, logger);
             var completedEventDao = new CompletedEventDao(config, logger);
@@ -39,8 +40,8 @@ namespace AzureCloudLabEnvironment
             var newEvents = onGoingEvents.Where(c => onGoingEventDao.IsNew(c)).ToList();
             var endedEvents = onGoingEventDao.GetEndedEvents();
 
-            var startEventQueueClient = new QueueClient(config["AzureWebJobsStorage"], "start-event");
-            var endEventQueueClient = new QueueClient(config["AzureWebJobsStorage"], "end-event");
+            var startEventQueueClient = new QueueClient(config.GetConfig(Config.Key.AzureWebJobsStorage), "start-event");
+            var endEventQueueClient = new QueueClient(config.GetConfig(Config.Key.AzureWebJobsStorage), "end-event");
 
             string Base64Encode(string plainText)
             {
