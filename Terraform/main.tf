@@ -43,6 +43,11 @@ resource "azurerm_storage_table" "on_going_events" {
   storage_account_name = azurerm_storage_account.storage.name
 }
 
+resource "azurerm_storage_table" "on_going_events" {
+  name                 = "CompletedEvent"
+  storage_account_name = azurerm_storage_account.storage.name
+}
+
 resource "azurerm_storage_table" "lab_credential" {
   name                 = "LabCredential"
   storage_account_name = azurerm_storage_account.storage.name

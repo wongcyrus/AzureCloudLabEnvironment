@@ -67,11 +67,11 @@ namespace AzureCloudLabEnvironment
 
             var tasks = Enumerable.Range(0, subStudentGroup.Count())
                 .Select(i => RunTerraformWithContainerGroupAsync(config,
-                    lab.TerraformRepo, lab.Branch, isCreate, GetContainerGroupName(i,lab.Name),
+                    lab.TerraformRepo, lab.Branch, isCreate, GetContainerGroupName(i, lab.Name),
                     new Dictionary<string, string>(terraformVariables), subStudentGroup.ElementAt(i)));
             await Task.WhenAll(tasks);
         }
-        
+
         private static async Task<string> RunTerraformWithContainerGroupAsync(
             IConfigurationRoot config,
             string gitRepositoryUrl,
@@ -104,7 +104,7 @@ namespace AzureCloudLabEnvironment
 
             var commands = $"curl -s {scriptUrl} | bash";
 
-            
+
             IWithVolume containerGroupWithVolume =
                 azure.ContainerGroups.Define(containerGroupName)
                .WithRegion(azureRegion)
@@ -122,7 +122,7 @@ namespace AzureCloudLabEnvironment
             for (var index = 0; index < labCredentials.Length; index++)
             {
                 var labCredential = labCredentials[index];
-                withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance, config, commands, index, labCredential, terraformVariables);
+                withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance, config, commands, index, labCredential, new Dictionary<string, string>(terraformVariables));
             }
 
             containerGroup = withNextContainerInstance
@@ -135,12 +135,13 @@ namespace AzureCloudLabEnvironment
         }
 
 
-        private static IWithNextContainerInstance AddContainerInstance(IWithVolume containerGroupWithVolume, IWithNextContainerInstance withNextContainerInstance, IConfigurationRoot config, string commands, 
+        private static IWithNextContainerInstance AddContainerInstance(IWithVolume containerGroupWithVolume, IWithNextContainerInstance withNextContainerInstance, IConfigurationRoot config, string commands,
 int index, LabCredential labCredential,
             IDictionary<string, string> terraformVariables)
         {
             terraformVariables.Remove("EMAIL");
             terraformVariables.Add("EMAIL", labCredential.Email);
+
             var prefixTerraformVariables = terraformVariables.Select(item => ("TF_VAR_" + item.Key, item.Value)).ToDictionary(p => p.Item1, p => p.Item2);
 
             IWithNextContainerInstance SetContainer(IContainerInstanceDefinitionBlank<IWithNextContainerInstance> container)
@@ -152,7 +153,7 @@ int index, LabCredential labCredential,
                     .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_SECRET", labCredential.Password)
                     .WithEnvironmentVariableWithSecuredValue("ARM_SUBSCRIPTION_ID", labCredential.SubscriptionId)
                     .WithEnvironmentVariableWithSecuredValue("ARM_TENANT_ID", labCredential.Tenant)
-                    .WithEnvironmentVariable("EMAIL", labCredential.Email)
+                    .WithEnvironmentVariables(terraformVariables)
                     .WithEnvironmentVariables(prefixTerraformVariables)
                     .WithStartingCommandLine("/bin/bash", "-c", commands)
                     .WithVolumeMountSetting("workspace", "/workspace")
@@ -161,14 +162,9 @@ int index, LabCredential labCredential,
             //TODO: Remove Workaround for bug https://github.com/Azure/azure-libraries-for-net/issues/1275
             IContainerInstanceDefinitionBlank<IWithNextContainerInstance> container;
             var suffix = Regex.Replace(labCredential.Email, @"[^0-9a-zA-Z]+", "-");
-            if (withNextContainerInstance == null)
-            {
-                container = containerGroupWithVolume.DefineContainerInstance("terraformcli-" + suffix);
-            }
-            else
-            {
-                container = withNextContainerInstance.DefineContainerInstance("terraformcli-" + suffix);
-            }
+            container = withNextContainerInstance == null ?
+                containerGroupWithVolume.DefineContainerInstance("terraformcli-" + suffix) :
+                withNextContainerInstance.DefineContainerInstance("terraformcli-" + suffix);
 
             return SetContainer(container);
         }

@@ -9,6 +9,7 @@ using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Azure;
 using Azure.Storage.Queues;
 using AzureCloudLabEnvironment.Dao;
 using AzureCloudLabEnvironment.Model;
@@ -18,15 +19,22 @@ namespace AzureCloudLabEnvironment
     public class CalenderPollingFunction
     {
         [FunctionName(nameof(CalenderPollingFunction))]
-        public async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo timer, ExecutionContext context,
+        public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo timer, ExecutionContext context,
             ILogger logger)
         {
+            if (timer.IsPastDue)
+            {
+                logger.LogInformation("Skip for Past Due.");
+                return;
+            }
+
             var config = Common.Config(context);
 
             var calendar = await CalenderPollingFunction.LoadFromUriAsync(new Uri(config["CalendarUrl"]));
             var onGoingEvents = GetOnGoingEvents(calendar, config["CalendarTimeZone"], logger);
 
             var onGoingEventDao = new OnGoingEventDao(config, logger);
+            var completedEventDao = new CompletedEventDao(config, logger);
 
             var newEvents = onGoingEvents.Where(c => onGoingEventDao.IsNew(c)).ToList();
             var endedEvents = onGoingEventDao.GetEndedEvents();
@@ -48,7 +56,7 @@ namespace AzureCloudLabEnvironment
                     StartTime = newClass.StartTime,
                     EndTime = newClass.EndTime,
                     Context = newClass.Context,
-                    RepeatTimes = onGoingEventDao.GetRepeatCount(newClass),
+                    RepeatTimes = completedEventDao.GetRepeatCount(newClass.PartitionKey),
                     Type = "START"
                 };
                 await startEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
@@ -57,18 +65,30 @@ namespace AzureCloudLabEnvironment
 
             foreach (var endedClass in endedEvents)
             {
-                //TODO: FIX GetRepeatCount logic as deleted event does not count!
                 var ev = new Event
                 {
                     Title = endedClass.PartitionKey,
                     StartTime = endedClass.StartTime,
                     EndTime = endedClass.EndTime,
                     Context = endedClass.Context,
-                    RepeatTimes = onGoingEventDao.GetRepeatCount(endedClass),
+                    RepeatTimes = completedEventDao.GetRepeatCount(endedClass.PartitionKey),
                     Type = "END"
                 };
                 await endEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
                 onGoingEventDao.Delete(endedClass);
+
+                var completedEvent = new CompletedEvent()
+                {
+                    Context = endedClass.Context,
+                    ETag = ETag.All,
+                    EndTime = endedClass.EndTime,
+                    PartitionKey = endedClass.PartitionKey,
+                    RowKey = endedClass.RowKey,
+                    StartTime = endedClass.StartTime,
+                    Timestamp = endedClass.Timestamp
+                };
+
+                completedEventDao.Add(completedEvent);
             }
 
             logger.LogInformation("onGoingEvents:" + onGoingEvents.Count);

@@ -16,14 +16,7 @@ namespace AzureCloudLabEnvironment.Dao
         public OnGoingEventDao(IConfigurationRoot config, ILogger logger) : base(config, logger)
         {
         }
-
-        public int GetRepeatCount(OnGoingEvent onGoingEvent)
-        {
-            Pageable<OnGoingEvent> oDataQueryEntities =
-                TableClient.Query<OnGoingEvent>(c => c.PartitionKey == onGoingEvent.PartitionKey);
-            return oDataQueryEntities.Count();
-        }
-
+        
         public List<OnGoingEvent> GetEndedEvents()
         {
             Pageable<OnGoingEvent> oDataQueryEntities = TableClient.Query<OnGoingEvent>(c => c.EndTime < DateTime.UtcNow);

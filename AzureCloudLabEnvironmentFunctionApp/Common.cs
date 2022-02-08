@@ -10,7 +10,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace AzureCloudLabEnvironment
 {
-    internal class Common
+    internal static class Common
     {
         public static IConfigurationRoot Config(ExecutionContext context)
         {

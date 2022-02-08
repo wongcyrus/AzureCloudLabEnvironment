@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AzureCloudLabEnvironment", "AzureCloudLabEnvironmentFunctionApp\AzureCloudLabEnvironment.csproj", "{64A25839-F4A3-4CBB-96E5-FC5DABB32311}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LocalDevelopmentInitialization", "LocalDevelopmentInitialization\LocalDevelopmentInitialization.csproj", "{8A2FA731-6440-4093-ADDB-1D21EE485DD2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{64A25839-F4A3-4CBB-96E5-FC5DABB32311}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{64A25839-F4A3-4CBB-96E5-FC5DABB32311}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{64A25839-F4A3-4CBB-96E5-FC5DABB32311}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8A2FA731-6440-4093-ADDB-1D21EE485DD2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8A2FA731-6440-4093-ADDB-1D21EE485DD2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8A2FA731-6440-4093-ADDB-1D21EE485DD2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8A2FA731-6440-4093-ADDB-1D21EE485DD2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
