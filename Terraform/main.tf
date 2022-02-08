@@ -3,12 +3,6 @@ resource "azurerm_resource_group" "func-rg" {
   location = var.LOCATION
 }
 
-resource "azurerm_resource_group" "terraform-rg" {
-  name     = "${var.RESOURCE_GROUP}-terraform"
-  location = var.LOCATION
-}
-
-
 resource "random_string" "prefix" {
   length  = 4
   special = false
@@ -43,7 +37,7 @@ resource "azurerm_storage_table" "on_going_events" {
   storage_account_name = azurerm_storage_account.storage.name
 }
 
-resource "azurerm_storage_table" "on_going_events" {
+resource "azurerm_storage_table" "completed_events" {
   name                 = "CompletedEvent"
   storage_account_name = azurerm_storage_account.storage.name
 }
@@ -53,12 +47,10 @@ resource "azurerm_storage_table" "lab_credential" {
   storage_account_name = azurerm_storage_account.storage.name
 }
 
-
 resource "azurerm_storage_table" "subscriptions" {
   name                 = "Subscription"
   storage_account_name = azurerm_storage_account.storage.name
 }
-
 
 resource "azurerm_storage_queue" "start_event" {
   name                 = "start-event"

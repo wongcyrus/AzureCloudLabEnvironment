@@ -1,3 +1,8 @@
+resource "azurerm_resource_group" "terraform-rg" {
+  name     = "${var.RESOURCE_GROUP.name}-terraform"
+  location = var.LOCATION
+}
+
 resource "azurerm_application_insights" "func_application_insights" {
   name                = "func-application-insights"
   location            = var.LOCATION
@@ -49,8 +54,9 @@ resource "azurerm_function_app" "func_function_app" {
     CalendarUrl                    = var.CALENDAR_URL
     CalendarTimeZone               = var.CALENDAR_TIME_ZONE
     AcrUrl                         = azurerm_container_registry.acr.login_server
-    AcrUser                        = azurerm_container_registry.acr.admin_username
+    AcrUserName                        = azurerm_container_registry.acr.admin_username
     AcrPassword                    = azurerm_container_registry.acr.admin_password
+    TerraformResourceGroupName     = azurerm_resource_group.terraform-rg.name
     StorageAccountName             = var.STORAGE_ACC_NAME
     StorageAccountKey              = var.STORAGE_ACC_KEY
   }
@@ -61,31 +67,35 @@ resource "azurerm_function_app" "func_function_app" {
   identity {
     type = "SystemAssigned"
   }
+  lifecycle {
+    ignore_changes = [
+      app_settings["WEBSITE_RUN_FROM_PACKAGE"], # prevent TF reporting configuration drift after app code is deployed
+    ]
+  }
 }
 
 data "azurerm_subscription" "primary" {}
 
 resource "azurerm_role_definition" "run_azure_container_instance" {
   name  = "run_azure_container_instance"
-  scope = data.azurerm_subscription.primary.id
+  scope = azurerm_resource_group.terraform-rg.id
 
   permissions {
     actions = [
-      "Microsoft.ContainerRegistry/registries/push/write",
-      "Microsoft.ContainerRegistry/registries/pull/read",
-      "Microsoft.ContainerRegistry/registries/read",
-      "Microsoft.ContainerRegistry/registries/importImage/action"
+      "Microsoft.Resources/subscriptions/resourcegroups/read",
+      "Microsoft.ContainerInstance/containerGroups/read",
+      "Microsoft.ContainerInstance/containerGroups/write",
+      "Microsoft.ContainerInstance/containerGroups/delete"
     ]
     not_actions = []
   }
-
   assignable_scopes = [
-    data.azurerm_subscription.primary.id
+    azurerm_resource_group.terraform-rg.id
   ]
 }
 
-resource "azurerm_role_assignment" "example" {
-  scope              = data.azurerm_subscription.primary.id
+resource "azurerm_role_assignment" "functionapp_run_azure_container_instance" {
+  scope              = azurerm_resource_group.terraform-rg.id
   role_definition_id = azurerm_role_definition.run_azure_container_instance.role_definition_resource_id
   principal_id       = azurerm_function_app.func_function_app.identity.0.principal_id
 }
@@ -98,18 +108,17 @@ resource "null_resource" "function_app_publish" {
   provisioner "local-exec" {
     command = local.publish_code_command
   }
-  depends_on = [local.publish_code_command, data.archive_file.azure_function_deployment_package]
+  depends_on = [
+    local.publish_code_command,
+    null_resource.function_app_build_publish,
+    data.archive_file.azure_function_deployment_package
+  ]
   triggers = {
     source_md5           = filemd5(data.archive_file.azure_function_deployment_package.output_path)
     publish_code_command = local.publish_code_command
+    build_number         = "${timestamp()}"
   }
 }
-
-# data "azurerm_user_assigned_identity" "assigned_identity_acr_pull" {
-#   provider            = azurerm.acr_sub
-#   name                = "User_ACR_pull"
-#   resource_group_name = var.RESOURCE_GROUP.name
-# }
 
 resource "azurerm_container_registry" "acr" {
   name                = "${var.PREFIX}TerraformContainerRegistry"

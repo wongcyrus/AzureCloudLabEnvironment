@@ -24,13 +24,13 @@ namespace AzureCloudLabEnvironment
         {
             if (timer.IsPastDue)
             {
-                logger.LogInformation("Skip for Past Due.");
+                logger.LogInformation("Skip for past due.");
                 return;
             }
 
             var config = Common.Config(context);
 
-            var calendar = await CalenderPollingFunction.LoadFromUriAsync(new Uri(config["CalendarUrl"]));
+            var calendar = await LoadFromUriAsync(new Uri(config["CalendarUrl"]));
             var onGoingEvents = GetOnGoingEvents(calendar, config["CalendarTimeZone"], logger);
 
             var onGoingEventDao = new OnGoingEventDao(config, logger);

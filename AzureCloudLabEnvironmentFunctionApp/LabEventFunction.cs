@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -80,10 +81,8 @@ namespace AzureCloudLabEnvironment
             string containerGroupName,
             IDictionary<string, string> terraformVariables, LabCredential[] labCredentials)
         {
-            Console.WriteLine($"\nCreating container group '{containerGroupName}'...");
-
-            const string resourceGroupName = "azure-cloud-lab-environment-terraform";
-
+            Console.WriteLine($"Creating container group '{containerGroupName}'...");
+            string resourceGroupName = config["TerraformResourceGroupName"];
             var azure = await Common.GetAzure();
             // Get the resource group's region
             IResourceGroup resGroup = await azure.ResourceGroups.GetByNameAsync(resourceGroupName);
