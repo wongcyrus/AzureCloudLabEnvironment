@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Ical.Net;
@@ -20,6 +21,7 @@ namespace AzureCloudLabEnvironment
     public class CalenderPollingFunction
     {
         [FunctionName(nameof(CalenderPollingFunction))]
+        // ReSharper disable once UnusedMember.Global
         public async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo timer, ExecutionContext context,
             ILogger logger)
         {
@@ -46,7 +48,7 @@ namespace AzureCloudLabEnvironment
             string Base64Encode(string plainText)
             {
                 var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
-                return System.Convert.ToBase64String(plainTextBytes);
+                return Convert.ToBase64String(plainTextBytes);
             }
 
             foreach (var newClass in newEvents)
@@ -142,6 +144,7 @@ namespace AzureCloudLabEnvironment
                 }
 
                 logger.LogInformation(pk + description);
+                Debug.Assert(pk != null, nameof(pk) + " != null");
                 pk = Regex.Replace(pk, @"[^0-9a-zA-Z]+", ",");
                 rk = Regex.Replace(rk, @"[^0-9a-zA-Z]+", ",");
                 onGoingEvents.Add(new OnGoingEvent()

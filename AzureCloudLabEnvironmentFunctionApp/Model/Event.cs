@@ -14,7 +14,7 @@ namespace AzureCloudLabEnvironment.Model
 
         public string ToJson()
         {
-            return JsonSerializer.Serialize<Event>(this);
+            return JsonSerializer.Serialize(this);
         }
 
         public static Event FromJson(string jsonString)

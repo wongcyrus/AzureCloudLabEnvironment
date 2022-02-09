@@ -16,9 +16,11 @@ using Microsoft.Azure.WebJobs;
 
 namespace AzureCloudLabEnvironment
 {
+    // ReSharper disable once UnusedMember.Global
     public class LabEventFunction
     {
         [FunctionName(nameof(StartLabEventHandlerFunction))]
+        // ReSharper disable once UnusedMember.Global
         public async Task StartLabEventHandlerFunction([QueueTrigger("start-event", Connection = "AzureWebJobsStorage")] Event ev, ILogger log, ExecutionContext executionContext)
         {
             Lab lab = Lab.FromJson(ev.Context);
@@ -38,6 +40,7 @@ namespace AzureCloudLabEnvironment
             if (lab == null) return;
             lab.Name = ev.Title;
             lab.RepeatTimes = ev.RepeatTimes;
+            lab.Branch = lab.Branch.Replace("###RepeatTimes###", lab.RepeatTimes.ToString());
             log.LogInformation($"End the lab: {lab}");
             await RunClassInfrastructure(log, executionContext, lab, false);
         }
@@ -53,6 +56,7 @@ namespace AzureCloudLabEnvironment
             var terraformVariables = new Dictionary<string, string>()
             {
                 {"LAB", lab.Name},
+                {"BRANCH", lab.Branch},
                 {"REPEAT_TIMES", lab.RepeatTimes.ToString()},
             };
 
@@ -61,9 +65,9 @@ namespace AzureCloudLabEnvironment
             string GetContainerGroupName(int i, string labName)
             {
                 return "container-" + i + "-" + Regex.Replace(labName, @"[^0-9a-zA-Z]+", "-").Trim();
-            };
+            }
 
-            var tasks = Enumerable.Range(0, subStudentGroup.Count())
+            var tasks = Enumerable.Range(0, subStudentGroup.Count)
                 .Select(i => RunTerraformWithContainerGroupAsync(config, log, lab, isCreate, GetContainerGroupName(i, lab.Name),
                     new Dictionary<string, string>(terraformVariables), subStudentGroup.ElementAt(i)));
             await Task.WhenAll(tasks);
@@ -90,9 +94,8 @@ namespace AzureCloudLabEnvironment
                 await azure.ContainerGroups.DeleteByIdAsync(containerGroup.Id);
             }
             log.LogInformation($"Create New container group'{containerGroupName}'");
-
-            var branch = lab.Branch.Replace("###RepeatTimes###", lab.RepeatTimes.ToString());
-            var scriptUrl = lab.TerraformRepo.Replace("github.com", "raw.githubusercontent.com") + "/" + branch + "/" + (isCreate
+            
+            var scriptUrl = lab.TerraformRepo.Replace("github.com", "raw.githubusercontent.com") + "/" + lab.Branch + "/" + (isCreate
                  ? "deploy.sh"
                  : "undeploy.sh");
 
@@ -126,9 +129,8 @@ namespace AzureCloudLabEnvironment
                 };
                 var token = deployment.GetToken(config.GetConfig(Config.Key.Salt));
 
-                var individualTerraformVariables = new Dictionary<string, string>(terraformVariables);
+                var individualTerraformVariables = new Dictionary<string, string>(terraformVariables) {{"EMAIL", labCredential.Email}};
 
-                individualTerraformVariables.Add("EMAIL", labCredential.Email);
                 var appName = Environment.ExpandEnvironmentVariables("%WEBSITE_SITE_NAME%");
                 var callbackUrl = $"https://{appName}.azurewebsites.net/api/CallBackFunction?token={token}";
                 individualTerraformVariables.Add("CALLBACK_URL", callbackUrl);
@@ -149,13 +151,18 @@ namespace AzureCloudLabEnvironment
                 }
             }
 
-            containerGroup = withNextContainerInstance
-                .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
-                .WithDnsPrefix(containerGroupName)
-                .Create();
-            log.LogInformation($"Created container group'{containerGroupName}'");
+            if (withNextContainerInstance != null)
+            {
+                containerGroup = withNextContainerInstance
+                    .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
+                    .WithDnsPrefix(containerGroupName)
+                    .Create();
+                log.LogInformation($"Created container group'{containerGroupName}'");
 
-            return containerGroup.Id;
+                return containerGroup.Id;
+            }
+
+            return "";
         }
 
 
@@ -181,9 +188,8 @@ int index, LabCredential labCredential,
                     .Attach();
             }
             //TODO: Remove Workaround for bug https://github.com/Azure/azure-libraries-for-net/issues/1275
-            IContainerInstanceDefinitionBlank<IWithNextContainerInstance> container;
             var suffix = Regex.Replace(labCredential.Email, @"[^0-9a-zA-Z]+", "-");
-            container = withNextContainerInstance == null ?
+            var container = withNextContainerInstance == null ?
                 containerGroupWithVolume.DefineContainerInstance("terraformcli-" + suffix) :
                 withNextContainerInstance.DefineContainerInstance("terraformcli-" + suffix);
 

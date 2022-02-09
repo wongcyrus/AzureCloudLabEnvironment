@@ -59,19 +59,6 @@ internal abstract class Dao<T> where T : class, ITableEntity, new()
         Logger.LogInformation("Deleted " + entity);
     }
 
-    public T Get(T entity)
-    {
-        try
-        {
-            var response = TableClient.GetEntity<T>(entity.PartitionKey, entity.RowKey);
-            return response.Value;
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
     public T Get(string partitionKey)
     {
         try

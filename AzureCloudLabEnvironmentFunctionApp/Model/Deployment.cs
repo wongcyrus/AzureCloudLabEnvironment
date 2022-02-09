@@ -21,6 +21,10 @@ namespace AzureCloudLabEnvironment.Model
         public DateTimeOffset? Timestamp { get; set; }
         public ETag ETag { get; set; }
 
+        public override string ToString()
+        {
+            return $"{Name}[{RepeatTimes}] {Branch} -> {Email}";
+        }
 
         public string GetToken(string salt)
         {
@@ -33,9 +37,9 @@ namespace AzureCloudLabEnvironment.Model
                 byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(rawData));
                 // Convert byte array to a string   
                 StringBuilder builder = new StringBuilder();
-                for (int i = 0; i < bytes.Length; i++)
+                foreach (var b in bytes)
                 {
-                    builder.Append(bytes[i].ToString("x2"));
+                    builder.Append(b.ToString("x2"));
                 }
                 return builder.ToString();
             }

@@ -28,6 +28,7 @@ namespace AzureCloudLabEnvironment
         }
 
         [FunctionName(nameof(StudentRegistrationFunction))]
+        // ReSharper disable once UnusedMember.Global
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             ILogger log, ExecutionContext context)
@@ -75,7 +76,7 @@ namespace AzureCloudLabEnvironment
                     return GetContentResult("Missing Data and Registration Failed!");
                 }
                 email = email.Trim().ToLower();
-                var isValidSubscriptionId = Guid.TryParse(subscriptionId, out var guidOutput);
+                var isValidSubscriptionId = Guid.TryParse(subscriptionId, out _);
                 if (!isValidSubscriptionId)
                 {
                     return GetContentResult("Invalid Subscription ID format and Registration Failed!");
