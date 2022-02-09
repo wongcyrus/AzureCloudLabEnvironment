@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using Azure;
 using Azure.Data.Tables;
 using AzureCloudLabEnvironment.Helper;
@@ -60,7 +61,27 @@ internal abstract class Dao<T> where T : class, ITableEntity, new()
 
     public T Get(T entity)
     {
-        var response = TableClient.GetEntity<T>(entity.PartitionKey, entity.RowKey);
-        return response.Value;
+        try
+        {
+            var response = TableClient.GetEntity<T>(entity.PartitionKey, entity.RowKey);
+            return response.Value;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public T Get(string partitionKey)
+    {
+        try
+        {
+            var response = TableClient.GetEntity<T>(partitionKey, partitionKey);
+            return response.Value;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 }

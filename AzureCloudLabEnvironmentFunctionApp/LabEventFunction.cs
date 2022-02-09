@@ -1,17 +1,14 @@
+using System;
 using AzureCloudLabEnvironment.Model;
 using Microsoft.Extensions.Logging;
-
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AzureCloudLabEnvironment.Dao;
 using AzureCloudLabEnvironment.Helper;
-using Microsoft.Azure.Management.ContainerInstance.Fluent;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definition;
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
-using Microsoft.Azure.Management.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent;
 using Microsoft.Azure.Management.ResourceManager.Fluent.Core;
 using Microsoft.Azure.WebJobs;
@@ -47,6 +44,7 @@ namespace AzureCloudLabEnvironment
 
         private static async Task RunClassInfrastructure(ILogger log, ExecutionContext context, Lab lab, bool isCreate)
         {
+
             var config = new Config(context);
             var labCredentialDao = new LabCredentialDao(config, log);
 
@@ -64,23 +62,21 @@ namespace AzureCloudLabEnvironment
             {
                 return "container-" + i + "-" + Regex.Replace(labName, @"[^0-9a-zA-Z]+", "-").Trim();
             };
-            
+
             var tasks = Enumerable.Range(0, subStudentGroup.Count())
-                .Select(i => RunTerraformWithContainerGroupAsync(config,
-                    lab.TerraformRepo, lab.Branch, isCreate, GetContainerGroupName(i, lab.Name),
+                .Select(i => RunTerraformWithContainerGroupAsync(config, log, lab, isCreate, GetContainerGroupName(i, lab.Name),
                     new Dictionary<string, string>(terraformVariables), subStudentGroup.ElementAt(i)));
             await Task.WhenAll(tasks);
         }
 
         private static async Task<string> RunTerraformWithContainerGroupAsync(
             Config config,
-            string gitRepositoryUrl,
-            string branch,
+            ILogger log,
+            Lab lab,
             bool isCreate,
             string containerGroupName,
             IDictionary<string, string> terraformVariables, LabCredential[] labCredentials)
         {
-            Console.WriteLine($"Creating container group '{containerGroupName}'...");
             string resourceGroupName = config.GetConfig(Config.Key.TerraformResourceGroupName);
             var azure = await Helper.Azure.Get();
             // Get the resource group's region
@@ -90,18 +86,17 @@ namespace AzureCloudLabEnvironment
             var containerGroup = await azure.ContainerGroups.GetByResourceGroupAsync(resourceGroupName, containerGroupName);
             if (containerGroup != null)
             {
-                Console.WriteLine("Delete");
+                log.LogInformation($"Delete existing container group'{containerGroupName}'");
                 await azure.ContainerGroups.DeleteByIdAsync(containerGroup.Id);
-                Console.WriteLine("Deleted");
             }
-            Console.WriteLine("Create");
+            log.LogInformation($"Create New container group'{containerGroupName}'");
 
-            var scriptUrl = gitRepositoryUrl.Replace("github.com", "raw.githubusercontent.com") + "/" + branch + "/" + (isCreate
-                ? "deploy.sh"
-                : "undeploy.sh");
+            var branch = lab.Branch.Replace("###RepeatTimes###", lab.RepeatTimes.ToString());
+            var scriptUrl = lab.TerraformRepo.Replace("github.com", "raw.githubusercontent.com") + "/" + branch + "/" + (isCreate
+                 ? "deploy.sh"
+                 : "undeploy.sh");
 
             var commands = $"curl -s {scriptUrl} | bash";
-
 
             var containerGroupWithVolume =
                 azure.ContainerGroups.Define(containerGroupName)
@@ -115,19 +110,50 @@ namespace AzureCloudLabEnvironment
                .WithStorageAccountKey(config.GetConfig(Config.Key.StorageAccountKey))
                .Attach();
 
-
+            var deploymentDao = new DeploymentDao(config, log);
             IWithNextContainerInstance withNextContainerInstance = null;
             for (var index = 0; index < labCredentials.Length; index++)
             {
                 var labCredential = labCredentials[index];
-                withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance, config, commands, index, labCredential, new Dictionary<string, string>(terraformVariables));
+                var deployment = new Deployment()
+                {
+                    Name = lab.Name,
+                    Branch = lab.Branch,
+                    Email = labCredential.Email,
+                    RepeatTimes = lab.RepeatTimes ?? 0,
+                    TerraformRepo = lab.TerraformRepo,
+                    Status = "CREATING"
+                };
+                var token = deployment.GetToken(config.GetConfig(Config.Key.Salt));
+
+                var individualTerraformVariables = new Dictionary<string, string>(terraformVariables);
+
+                individualTerraformVariables.Add("EMAIL", labCredential.Email);
+                var appName = Environment.ExpandEnvironmentVariables("%WEBSITE_SITE_NAME%");
+                var callbackUrl = $"https://{appName}.azurewebsites.net/api/CallBackFunction?token={token}";
+                individualTerraformVariables.Add("CALLBACK_URL", callbackUrl);
+
+                withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance, config, commands, index, labCredential, individualTerraformVariables);
+
+                if (isCreate)
+                {
+                    deployment.PartitionKey = token;
+                    deployment.RowKey = token;
+                    deploymentDao.Add(deployment);
+                }
+                else
+                {
+                    deployment = deploymentDao.Get(token);
+                    deployment.Status = "DELETED";
+                    deploymentDao.Update(deployment);
+                }
             }
 
             containerGroup = withNextContainerInstance
                 .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
                 .WithDnsPrefix(containerGroupName)
                 .Create();
-            Console.WriteLine("Created");
+            log.LogInformation($"Created container group'{containerGroupName}'");
 
             return containerGroup.Id;
         }
@@ -137,9 +163,6 @@ namespace AzureCloudLabEnvironment
 int index, LabCredential labCredential,
             IDictionary<string, string> terraformVariables)
         {
-            terraformVariables.Remove("EMAIL");
-            terraformVariables.Add("EMAIL", labCredential.Email);
-
             var prefixTerraformVariables = terraformVariables.Select(item => ("TF_VAR_" + item.Key, item.Value)).ToDictionary(p => p.Item1, p => p.Item2);
 
             IWithNextContainerInstance SetContainer(IContainerInstanceDefinitionBlank<IWithNextContainerInstance> container)
@@ -167,18 +190,5 @@ int index, LabCredential labCredential,
             return SetContainer(container);
         }
 
-        private static void DeleteContainerGroup(IAzure azure, string resourceGroupName, string containerGroupName)
-        {
-            IContainerGroup containerGroup = null;
-
-            while (containerGroup == null)
-            {
-                containerGroup = azure.ContainerGroups.GetByResourceGroup(resourceGroupName, containerGroupName);
-                SdkContext.DelayProvider.Delay(1000);
-            }
-
-            Console.WriteLine($"Deleting container group '{containerGroupName}'...");
-            azure.ContainerGroups.DeleteById(containerGroup.Id);
-        }
     }
 }

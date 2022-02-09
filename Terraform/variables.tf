@@ -2,7 +2,7 @@
 variable "SUBSCRIPTION_ID" {}
 variable "TENANT_ID" {}
 variable "CALENDAR_URL" {}
-variable "SMTP" {}
+variable "EMAIL_SMTP" {}
 variable "EMAIL_USERNAME" {}
 variable "EMAIL_PASSWORD" {}
 variable "EMAIL_FROM_ADDRESS" {}

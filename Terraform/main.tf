@@ -47,6 +47,11 @@ resource "azurerm_storage_table" "lab_credential" {
   storage_account_name = azurerm_storage_account.storage.name
 }
 
+resource "azurerm_storage_table" "deployment" {
+  name                 = "Deployment"
+  storage_account_name = azurerm_storage_account.storage.name
+}
+
 resource "azurerm_storage_table" "subscriptions" {
   name                 = "Subscription"
   storage_account_name = azurerm_storage_account.storage.name
@@ -80,7 +85,7 @@ module "func" {
   DEPLOYMENTS_NAME          = azurerm_storage_container.deployments.name
   CALENDAR_TIME_ZONE        = var.CALENDAR_TIME_ZONE
   CALENDAR_URL              = var.CALENDAR_URL
-  SMTP                      = var.SMTP
+  EMAIL_SMTP                = var.EMAIL_SMTP
   EMAIL_USERNAME            = var.EMAIL_USERNAME
   EMAIL_PASSWORD            = var.EMAIL_PASSWORD
   EMAIL_FROM_ADDRESS        = var.EMAIL_FROM_ADDRESS

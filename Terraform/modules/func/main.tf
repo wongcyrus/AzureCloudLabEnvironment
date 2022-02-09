@@ -59,10 +59,11 @@ resource "azurerm_function_app" "func_function_app" {
     TerraformResourceGroupName     = azurerm_resource_group.terraform-rg.name
     StorageAccountName             = var.STORAGE_ACC_NAME
     StorageAccountKey              = var.STORAGE_ACC_KEY
-    Smtp                           = var.SMTP
+    EmailSmtp                      = var.EMAIL_SMTP
     EmailUserName                  = var.EMAIL_USERNAME
     EmailPassword                  = var.EMAIL_PASSWORD
     EmailFromAddress               = var.EMAIL_FROM_ADDRESS
+    Salt                           = var.PREFIX
   }
   os_type                    = "linux"
   storage_account_name       = var.STORAGE_ACC_NAME
