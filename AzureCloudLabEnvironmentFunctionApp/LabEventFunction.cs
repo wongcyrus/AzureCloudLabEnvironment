@@ -28,6 +28,7 @@ namespace AzureCloudLabEnvironment
             if (lab == null) return;
             lab.Name = ev.Title;
             lab.RepeatTimes = ev.RepeatTimes;
+            lab.Branch = lab.Branch.Replace("###RepeatTimes###", lab.RepeatTimes.ToString());
             log.LogInformation($"Start the lab: {lab}");
             await RunClassInfrastructure(log, executionContext, lab, true);
         }
@@ -146,23 +147,20 @@ namespace AzureCloudLabEnvironment
                 else
                 {
                     deployment = deploymentDao.Get(token);
-                    deployment.Status = "DELETED";
+                    deployment.Status = "DELETING";
                     deploymentDao.Update(deployment);
                 }
             }
 
-            if (withNextContainerInstance != null)
-            {
-                containerGroup = withNextContainerInstance
-                    .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
-                    .WithDnsPrefix(containerGroupName)
-                    .Create();
-                log.LogInformation($"Created container group'{containerGroupName}'");
+            if (withNextContainerInstance == null) return "";
+            containerGroup = withNextContainerInstance
+                .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
+                .WithDnsPrefix(containerGroupName)
+                .Create();
+            log.LogInformation($"Created container group'{containerGroupName}'");
 
-                return containerGroup.Id;
-            }
+            return containerGroup.Id;
 
-            return "";
         }
 
 

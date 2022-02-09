@@ -27,12 +27,12 @@ namespace AzureCloudLabEnvironment
             var deployment = deploymentDao.Get(token);
             if(deployment==null)
                 return Task.FromResult<IActionResult>(new OkObjectResult("Invalid token!"));
-            if (deployment.Status == "Creating")
+            if (deployment.Status == "CREATING")
             {
                 Stream stream = req.Body;
                 string output = new StreamReader(stream).ReadToEnd();
                 deployment.Output = output;
-                deployment.Status = "Created";
+                deployment.Status = "CREATED";
                 deploymentDao.Update(deployment);
 
                 var body = $@"
@@ -54,9 +54,9 @@ Azure Cloud Lab Environment
 
                 return Task.FromResult<IActionResult>(new OkObjectResult(output));
             }
-            if (deployment.Status == "Created")
+            if (deployment.Status == "DELETING")
             {
-                deployment.Status = "Deleted";
+                deployment.Status = "DELETED";
                 deploymentDao.Update(deployment);
                 var body = $@"
 Dear Student,
