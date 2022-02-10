@@ -10,3 +10,62 @@ The focus of Azure Cloud Lab Environment:
 5.	Serverless – the whole solution is using Azure Function under consumption plan.
 6.	Infrastructure Evolution – All students Azure Infrastructure can keep evolution automatically and let them learn how to build a large project with the lowest cost.
 
+## Architecture
+![Alt text](Images/AzureCloudLabEnvironmentOverview.png?raw=true "Title")
+The main function of the system is to create and destroy Infrastructure according to class schedule.
+
+**CalenderPollingFunction**
+
+It runs every 5 minutes and check the Google Calendar for upcoming class. When event starts it sends message to start-event queue and when event ends it sends message to end-event queue. The event message includes the name of the lab, GitHubRepo, Branch, and Repeated Times. Repeated Times is calculated by CompletedEvent table historical record. It keeps OnGoingEvent table up-to-date.
+ 
+**StartEventPoisonEventFunction and EndEventPoisonEventFunction**
+
+It sends error details to administrator email and saves the error details to ErrorLog table.
+
+**StudentRegistrationFunction** 
+
+It provides an online registration form for students to submit their Azure Subscription services principal. It prevents the duplication of submission by saving the name of lab and subscription ID in Subscription table, make a call to student subscription to ensure the services principal in Contributor role, and save the student email and services principal data in LabCredential table. Student need to 
+az ad sp create-for-rbac --role="Contributor" --scopes="/subscriptions/<Your Subscription ID>"
+ 
+**StartLabEventHandlerFunction and EndLabEventHandlerFunction** 
+  
+They handle the message of start-event queue and end-event queue respectively. They are very similar, and the only difference is the container starting command – deploy.sh and undeploy.sh. they convert the event message into lab object for common parameters such as lab, GitHubRepo, Branch, and Repeated Times. They query the LabCredential table and get the list of students with services principal data. Each student subscription is handled by one Terraform Container, and pass services principal and other data through environment variables. 1 container group holds 10 containers. They record the creating and deleting activities in Deployment table. 
+
+  
+**TerraformContainer**
+  
+It installs Azure CLI, Python 3.9, Terraform, and Curl and it can access the following variables
+   
+All containers mounts to containershare file share. Each container has it own folder. The deployment files keeps in the folder before the infrastructure deletion. Since deployment tools such as Terraform need to keep files (state file) for undeployment.
+deploy.sh 
+undeply.sh
+ 
+**TerraformContainerRegistry**
+  
+It stores the TerraformContainer and it prevents hitting the rate limit of DockerHub.
+  
+**CallBackFunction**
+  
+It provides the https endpoint for the TerraformContainer to callback after deployment and undeployment. It updates the Deployment table and email information to students.
+The following example is the output of Terraform.
+ 
+If there is a VM, it can return IP address, username, and password to students.
+ 
+All student subscriptions clean up to save cost.
+
+  
+## Lab Environment Evolution
+  
+Create a repeating event according to the class schedule.
+ 
+There are 2 ways to create a continuous changing Azure Infrastructure.
+1.	Create new branch for each lab class such as Lab0, Lab1, Lab2, … 
+lab.Branch = lab.Branch.Replace("###RepeatedTimes###", lab.RepeatedTimes.ToString());
+TerraformContainer checkout the difference branch every lab class.
+2.	Add conditional deployment logic through 2 environment variables REPEAT_TIMES and TF_VAR_REPEAT_TIMES.
+
+## Source Code
+Azure Cloud Lab Environment
+https://github.com/wongcyrus/AzureCloudLabEnvironment 
+Example AzureCloudLabInfrastructure Repo
+https://github.com/wongcyrus/AzureCloudLabInfrastructure 
