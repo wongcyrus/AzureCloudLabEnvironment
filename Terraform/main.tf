@@ -52,6 +52,11 @@ resource "azurerm_storage_table" "deployment" {
   storage_account_name = azurerm_storage_account.storage.name
 }
 
+resource "azurerm_storage_table" "error_log" {
+  name                 = "ErrorLog"
+  storage_account_name = azurerm_storage_account.storage.name
+}
+
 resource "azurerm_storage_table" "subscriptions" {
   name                 = "Subscription"
   storage_account_name = azurerm_storage_account.storage.name
@@ -89,6 +94,7 @@ module "func" {
   EMAIL_USERNAME            = var.EMAIL_USERNAME
   EMAIL_PASSWORD            = var.EMAIL_PASSWORD
   EMAIL_FROM_ADDRESS        = var.EMAIL_FROM_ADDRESS
+  ADMIN_EMAIL               = var.ADMIN_EMAIL
   depends_on                = [azurerm_resource_group.func-rg]
 }
 

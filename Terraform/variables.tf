@@ -6,6 +6,7 @@ variable "EMAIL_SMTP" {}
 variable "EMAIL_USERNAME" {}
 variable "EMAIL_PASSWORD" {}
 variable "EMAIL_FROM_ADDRESS" {}
+variable "ADMIN_EMAIL" {}
 
 # GLOBAL VARIABLES
 variable "RESOURCE_GROUP" {

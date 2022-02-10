@@ -51,6 +51,7 @@ Azure Cloud Lab Environment
                 };
                 var emailClient = new Email(config, log);
                 emailClient.Send(emailMessage, new[] { Email.StringToAttachment(output, "output.txt", "text/plain") });
+                log.LogInformation($"Sent CREATED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatTimes}");
 
                 return Task.FromResult<IActionResult>(new OkObjectResult(output));
             }
@@ -74,6 +75,7 @@ Azure Cloud Lab Environment
                 };
                 var emailClient = new Email(config, log);
                 emailClient.Send(emailMessage, null);
+                log.LogInformation($"Sent DELETED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatTimes}");
 
                 return Task.FromResult<IActionResult>(new OkObjectResult(deployment));
             }

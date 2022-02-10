@@ -63,6 +63,7 @@ resource "azurerm_function_app" "func_function_app" {
     EmailUserName                  = var.EMAIL_USERNAME
     EmailPassword                  = var.EMAIL_PASSWORD
     EmailFromAddress               = var.EMAIL_FROM_ADDRESS
+    AdminEmail                     = var.ADMIN_EMAIL
     Salt                           = var.PREFIX
   }
   os_type                    = "linux"

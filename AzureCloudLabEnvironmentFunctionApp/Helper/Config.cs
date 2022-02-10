@@ -30,6 +30,7 @@ namespace AzureCloudLabEnvironment.Helper
             EmailUserName,
             EmailPassword,
             EmailFromAddress,
+            AdminEmail,
             Environment,
             StorageAccountName,
             StorageAccountKey,
