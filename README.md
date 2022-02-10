@@ -59,9 +59,10 @@ All student subscriptions clean up to save cost.
 Create a repeating event according to the class schedule.
  
 There are 2 ways to create a continuous changing Azure Infrastructure.
-1.	Create new branch for each lab class such as Lab0, Lab1, Lab2, … 
+1.	Create new branch for each lab class such as Lab0, Lab1, Lab2, …  and TerraformContainer checkout the difference branch every lab class.
+```
 lab.Branch = lab.Branch.Replace("###RepeatedTimes###", lab.RepeatedTimes.ToString());
-TerraformContainer checkout the difference branch every lab class.
+```
 2.	Add conditional deployment logic through 2 environment variables REPEAT_TIMES and TF_VAR_REPEAT_TIMES.
 
 ## Source Code
