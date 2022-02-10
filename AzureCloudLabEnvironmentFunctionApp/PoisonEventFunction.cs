@@ -34,18 +34,17 @@ namespace AzureCloudLabEnvironment
             };
             var emailClient = new Email(config, log);
             emailClient.Send(emailMessage, null);
-            log.LogInformation($"{source} Queue trigger function processed: {message}");
 
             var errorLogDao = new ErrorLogDao(config, log);
-
-
             errorLogDao.Add(new ErrorLog()
             {
                 PartitionKey = source,
-                RowKey = DateTime.Now.ToString(CultureInfo.InvariantCulture),
+                RowKey = context.InvocationId.ToString(),
                 Message = message,
                 Source = source
             });
+
+            log.LogInformation($"{source} Queue trigger function processed: {message}");
         }
     }
 }

@@ -95,7 +95,7 @@ namespace AzureCloudLabEnvironment
                 await azure.ContainerGroups.DeleteByIdAsync(containerGroup.Id);
             }
             log.LogInformation($"Create New container group'{containerGroupName}'");
-            
+
             var scriptUrl = lab.TerraformRepo.Replace("github.com", "raw.githubusercontent.com") + "/" + lab.Branch + "/" + (isCreate
                  ? "deploy.sh"
                  : "undeploy.sh");
@@ -130,25 +130,25 @@ namespace AzureCloudLabEnvironment
                 };
                 var token = deployment.GetToken(config.GetConfig(Config.Key.Salt));
 
-                var individualTerraformVariables = new Dictionary<string, string>(terraformVariables) {{"EMAIL", labCredential.Email}};
+                var individualTerraformVariables = new Dictionary<string, string>(terraformVariables) { { "EMAIL", labCredential.Email } };
 
                 var appName = Environment.ExpandEnvironmentVariables("%WEBSITE_SITE_NAME%");
                 var callbackUrl = $"https://{appName}.azurewebsites.net/api/CallBackFunction?token={token}";
                 individualTerraformVariables.Add("CALLBACK_URL", callbackUrl);
 
-                withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance, config, commands, index, labCredential, individualTerraformVariables);
-
-                if (isCreate)
+                var previousDeployment = deploymentDao.Get(token);
+                if (isCreate && previousDeployment == null)
                 {
                     deployment.PartitionKey = token;
                     deployment.RowKey = token;
                     deploymentDao.Add(deployment);
+                    withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance, config, commands, index, labCredential, individualTerraformVariables);
                 }
                 else
                 {
-                    deployment = deploymentDao.Get(token);
-                    deployment.Status = "DELETING";
-                    deploymentDao.Update(deployment);
+                    previousDeployment.Status = "DELETING";
+                    deploymentDao.Update(previousDeployment);
+                    withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance, config, commands, index, labCredential, individualTerraformVariables);
                 }
             }
 

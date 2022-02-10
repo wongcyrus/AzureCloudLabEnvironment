@@ -15,7 +15,7 @@ internal class OnGoingEventDao : Dao<OnGoingEvent>
 
     public List<OnGoingEvent> GetEndedEvents()
     {
-        var oDataQueryEntities = TableClient.Query<OnGoingEvent>(c => c.EndTime < DateTime.UtcNow);
+        var oDataQueryEntities = TableClient.Query<OnGoingEvent>(c => c.EndTime < DateTime.UtcNow.AddMinutes(0.5));
         return oDataQueryEntities.ToList();
     }
 }
