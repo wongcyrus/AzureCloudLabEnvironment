@@ -46,12 +46,12 @@ Azure Cloud Lab Environment
                 var emailMessage = new EmailMessage
                 {
                     To = deployment.Email,
-                    Subject = $"Your lab deployment of {deployment.Name} session {deployment.RepeatTimes} is ready",
+                    Subject = $"Your lab deployment of {deployment.Name} session {deployment.RepeatedTimes} is ready",
                     Body = body
                 };
                 var emailClient = new Email(config, log);
                 emailClient.Send(emailMessage, new[] { Email.StringToAttachment(output, "output.txt", "text/plain") });
-                log.LogInformation($"Sent CREATED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatTimes}");
+                log.LogInformation($"Sent CREATED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
 
                 return Task.FromResult<IActionResult>(new OkObjectResult(output));
             }
@@ -70,12 +70,12 @@ Azure Cloud Lab Environment
                 var emailMessage = new EmailMessage
                 {
                     To = deployment.Email,
-                    Subject = $"Your lab deployment of {deployment.Name} session {deployment.RepeatTimes} has deleted.",
+                    Subject = $"Your lab deployment of {deployment.Name} session {deployment.RepeatedTimes} has deleted.",
                     Body = body
                 };
                 var emailClient = new Email(config, log);
                 emailClient.Send(emailMessage, null);
-                log.LogInformation($"Sent DELETED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatTimes}");
+                log.LogInformation($"Sent DELETED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
 
                 return Task.FromResult<IActionResult>(new OkObjectResult(deployment));
             }

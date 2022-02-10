@@ -7,13 +7,13 @@ namespace AzureCloudLabEnvironment.Model
     public class Lab
     {
         public string Name { get; set; }
-        public string TerraformRepo { get; set; }
+        public string GitHubRepo { get; set; }
         public string Branch { get; set; }
 
-        public int? RepeatTimes { get; set; }
+        public int? RepeatedTimes { get; set; }
         public override string ToString()
         {
-            return $"{Name}({RepeatTimes})->{TerraformRepo}({Branch})";
+            return $"{Name}({RepeatedTimes})->{GitHubRepo}({Branch})";
         }
         public static Lab FromJson(string jsonString)
         {

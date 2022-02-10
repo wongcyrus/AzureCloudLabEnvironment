@@ -38,7 +38,6 @@ namespace AzureCloudLabEnvironment
 
             if (req.Method == "GET")
             {
-
                 if (!req.Query.ContainsKey("email") || !req.Query.ContainsKey("lab"))
                 {
                     return GetContentResult("Invalid Url and it should contain lab and email!");
@@ -63,7 +62,8 @@ namespace AzureCloudLabEnvironment
                     return GetContentResult(form);
                 }
             }
-            else if (req.Method == "POST")
+
+            if (req.Method == "POST")
             {
                 log.LogInformation("POST Request");
                 string lab = req.Form["lab"];

@@ -10,9 +10,9 @@ namespace AzureCloudLabEnvironment.Model
     {
         public string Email { get; set; }
         public string Name { get; set; }
-        public string TerraformRepo { get; set; }
+        public string GitHubRepo { get; set; }
         public string Branch { get; set; }
-        public int RepeatTimes { get; set; }
+        public int RepeatedTimes { get; set; }
         public string Output { get; set; }
         public string Status { get; set; }
 
@@ -23,12 +23,12 @@ namespace AzureCloudLabEnvironment.Model
 
         public override string ToString()
         {
-            return $"{Name}[{RepeatTimes}] {Branch} -> {Email}";
+            return $"{Name}[{RepeatedTimes}] {Branch} -> {Email}";
         }
 
         public string GetToken(string salt)
         {
-            var tmpSource = salt + Name + Email + Branch + RepeatTimes;
+            var tmpSource = salt + Name + Email + Branch + RepeatedTimes;
             string ComputeSha256Hash(string rawData)
             {
                 // Create a SHA256   

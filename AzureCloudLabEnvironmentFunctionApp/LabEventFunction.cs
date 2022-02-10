@@ -26,11 +26,7 @@ namespace AzureCloudLabEnvironment
             Lab lab = Lab.FromJson(ev.Context);
             log.LogInformation($"StartLabEventHandlerFunction Queue trigger function processed: {ev} => {lab}");
             if (lab == null) return;
-            lab.Name = ev.Title;
-            lab.RepeatTimes = ev.RepeatTimes;
-            lab.Branch = lab.Branch.Replace("###RepeatTimes###", lab.RepeatTimes.ToString());
-            log.LogInformation($"Start the lab: {lab}");
-            await RunClassInfrastructure(log, executionContext, lab, true);
+            await RunClassInfrastructure(log, executionContext, ev,lab, true);
         }
 
         [FunctionName(nameof(EndLabEventHandlerFunction))]
@@ -39,15 +35,16 @@ namespace AzureCloudLabEnvironment
             Lab lab = Lab.FromJson(ev.Context);
             log.LogInformation($"EndLabEventHandlerFunction Queue trigger function processed: {ev} => {lab}");
             if (lab == null) return;
-            lab.Name = ev.Title;
-            lab.RepeatTimes = ev.RepeatTimes;
-            lab.Branch = lab.Branch.Replace("###RepeatTimes###", lab.RepeatTimes.ToString());
-            log.LogInformation($"End the lab: {lab}");
-            await RunClassInfrastructure(log, executionContext, lab, false);
+            await RunClassInfrastructure(log, executionContext, ev, lab, false);
         }
 
-        private static async Task RunClassInfrastructure(ILogger log, ExecutionContext context, Lab lab, bool isCreate)
+        private static async Task RunClassInfrastructure(ILogger log, ExecutionContext context, Event ev, Lab lab, bool isCreate)
         {
+            lab.Name = ev.Title;
+            lab.RepeatedTimes = ev.RepeatTimes;
+            lab.Branch = lab.Branch.Replace("###RepeatedTimes###", lab.RepeatedTimes.ToString());
+            var action = isCreate ? "Create" : "Delete";
+            log.LogInformation($"{action} the lab: {lab}");
 
             var config = new Config(context);
             var labCredentialDao = new LabCredentialDao(config, log);
@@ -58,7 +55,7 @@ namespace AzureCloudLabEnvironment
             {
                 {"LAB", lab.Name},
                 {"BRANCH", lab.Branch},
-                {"REPEAT_TIMES", lab.RepeatTimes.ToString()},
+                {"REPEAT_TIMES", lab.RepeatedTimes.ToString()},
             };
 
             var subStudentGroup = students.Chunk(10).ToList();
@@ -96,7 +93,7 @@ namespace AzureCloudLabEnvironment
             }
             log.LogInformation($"Create New container group'{containerGroupName}'");
 
-            var scriptUrl = lab.TerraformRepo.Replace("github.com", "raw.githubusercontent.com") + "/" + lab.Branch + "/" + (isCreate
+            var scriptUrl = lab.GitHubRepo.Replace("github.com", "raw.githubusercontent.com") + "/" + lab.Branch + "/" + (isCreate
                  ? "deploy.sh"
                  : "undeploy.sh");
 
@@ -124,8 +121,8 @@ namespace AzureCloudLabEnvironment
                     Name = lab.Name,
                     Branch = lab.Branch,
                     Email = labCredential.Email,
-                    RepeatTimes = lab.RepeatTimes ?? 0,
-                    TerraformRepo = lab.TerraformRepo,
+                    RepeatedTimes = lab.RepeatedTimes ?? 0,
+                    GitHubRepo = lab.GitHubRepo,
                     Status = "CREATING"
                 };
                 var token = deployment.GetToken(config.GetConfig(Config.Key.Salt));
