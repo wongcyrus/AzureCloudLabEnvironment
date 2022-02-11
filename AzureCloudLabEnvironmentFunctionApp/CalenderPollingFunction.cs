@@ -51,47 +51,49 @@ namespace AzureCloudLabEnvironment
                 return Convert.ToBase64String(plainTextBytes);
             }
 
-            foreach (var newClass in newEvents)
+            foreach (var newEvent in newEvents)
             {
+                logger.LogInformation("newClass:" + newEvent);
                 var ev = new Event
                 {
-                    Title = newClass.PartitionKey,
-                    StartTime = newClass.StartTime,
-                    EndTime = newClass.EndTime,
-                    Context = newClass.Context,
-                    RepeatTimes = completedEventDao.GetRepeatCount(newClass.PartitionKey),
+                    Title = newEvent.PartitionKey,
+                    StartTime = newEvent.StartTime,
+                    EndTime = newEvent.EndTime,
+                    Context = newEvent.Context,
+                    RepeatTimes = completedEventDao.GetRepeatCount(newEvent.PartitionKey),
                     Type = "START"
                 };
                 await startEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
-                onGoingEventDao.Add(newClass);
+                onGoingEventDao.Upsert(newEvent);
             }
 
-            foreach (var endedClass in endedEvents)
+            foreach (var endedEvent in endedEvents)
             {
+                logger.LogInformation("endedClass:" + endedEvent);
                 var ev = new Event
                 {
-                    Title = endedClass.PartitionKey,
-                    StartTime = endedClass.StartTime,
-                    EndTime = endedClass.EndTime,
-                    Context = endedClass.Context,
-                    RepeatTimes = completedEventDao.GetRepeatCount(endedClass.PartitionKey),
+                    Title = endedEvent.PartitionKey,
+                    StartTime = endedEvent.StartTime,
+                    EndTime = endedEvent.EndTime,
+                    Context = endedEvent.Context,
+                    RepeatTimes = completedEventDao.GetRepeatCount(endedEvent.PartitionKey),
                     Type = "END"
                 };
                 await endEventQueueClient.SendMessageAsync(Base64Encode(ev.ToJson()));
-                onGoingEventDao.Delete(endedClass);
+                onGoingEventDao.Delete(endedEvent);
 
                 var completedEvent = new CompletedEvent()
                 {
-                    Context = endedClass.Context,
+                    Context = endedEvent.Context,
                     ETag = ETag.All,
-                    EndTime = endedClass.EndTime,
-                    PartitionKey = endedClass.PartitionKey,
-                    RowKey = endedClass.RowKey,
-                    StartTime = endedClass.StartTime,
-                    Timestamp = endedClass.Timestamp
+                    EndTime = endedEvent.EndTime,
+                    PartitionKey = endedEvent.PartitionKey,
+                    RowKey = endedEvent.RowKey,
+                    StartTime = endedEvent.StartTime,
+                    Timestamp = endedEvent.Timestamp
                 };
 
-                completedEventDao.Add(completedEvent);
+                completedEventDao.Upsert(completedEvent);
             }
 
             logger.LogInformation("onGoingEvents:" + onGoingEvents.Count);
@@ -111,12 +113,7 @@ namespace AzureCloudLabEnvironment
                 TimeZoneInfo.FindSystemTimeZoneById(calenderTimeZone));
             var startUtc = DateTime.UtcNow.AddMinutes(-threshold);
             var endUtc = DateTime.UtcNow.AddMinutes(threshold);
-            var occurrencesRepeatedEvents = calendar.GetOccurrences(startUtc, endUtc);
-            var occurrencesSingleEvents = calendar.GetOccurrences(start, end);
-
-            var occurrences = new List<Occurrence>();
-            occurrences.AddRange(occurrencesRepeatedEvents);
-            occurrences.AddRange(occurrencesSingleEvents);
+            var occurrences = calendar.GetOccurrences(startUtc, endUtc);
 
             string GetRowKey(string summary, DateTime startTime, DateTime endTime) => $"{summary} - From: {startTime.ToLocalTime()} To: {endTime.ToLocalTime()} TimeZone: {TimeZoneInfo.Local.StandardName}";
 
