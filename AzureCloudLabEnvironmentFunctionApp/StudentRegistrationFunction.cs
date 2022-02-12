@@ -19,12 +19,12 @@ namespace AzureCloudLabEnvironment
     {
         private static AppPrincipal ReadToObject(string json)
         {
-            var deserializedUser = new AppPrincipal();
+            var appPrincipal = new AppPrincipal();
             var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
-            var ser = new DataContractJsonSerializer(deserializedUser.GetType());
-            deserializedUser = ser.ReadObject(ms) as AppPrincipal;
+            var ser = new DataContractJsonSerializer(appPrincipal.GetType());
+            appPrincipal = ser.ReadObject(ms) as AppPrincipal;
             ms.Close();
-            return deserializedUser;
+            return appPrincipal;
         }
 
         [FunctionName(nameof(StudentRegistrationFunction))]

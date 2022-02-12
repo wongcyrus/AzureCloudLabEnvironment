@@ -7,7 +7,6 @@ variable "STORAGE_ACC_NAME" {}
 variable "STORAGE_ACC_KEY" {}
 variable "STORAGE_CONNECTION_STRING" {}
 variable "DEPLOYMENTS_NAME" {}
-variable "CALENDAR_TIME_ZONE" {}
 variable "CALENDAR_URL" {}
 variable "EMAIL_SMTP" {}
 variable "EMAIL_USERNAME" {}

@@ -18,7 +18,4 @@ variable "ENVIRONMENT" {
 variable "LOCATION" {
   default = "EastAsia"
 }
-variable "CALENDAR_TIME_ZONE" {
-  default = "China Standard Time"
-}
 

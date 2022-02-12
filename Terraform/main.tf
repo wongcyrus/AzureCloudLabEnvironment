@@ -88,7 +88,6 @@ module "func" {
   STORAGE_ACC_KEY           = azurerm_storage_account.storage.primary_access_key
   STORAGE_CONNECTION_STRING = azurerm_storage_account.storage.primary_blob_connection_string
   DEPLOYMENTS_NAME          = azurerm_storage_container.deployments.name
-  CALENDAR_TIME_ZONE        = var.CALENDAR_TIME_ZONE
   CALENDAR_URL              = var.CALENDAR_URL
   EMAIL_SMTP                = var.EMAIL_SMTP
   EMAIL_USERNAME            = var.EMAIL_USERNAME

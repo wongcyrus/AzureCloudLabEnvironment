@@ -52,7 +52,6 @@ resource "azurerm_function_app" "func_function_app" {
     APPINSIGHTS_INSTRUMENTATIONKEY = azurerm_application_insights.func_application_insights.instrumentation_key,
     WEBSITE_RUN_FROM_PACKAGE       = "1"
     CalendarUrl                    = var.CALENDAR_URL
-    CalendarTimeZone               = var.CALENDAR_TIME_ZONE
     AcrUrl                         = azurerm_container_registry.acr.login_server
     AcrUserName                    = azurerm_container_registry.acr.admin_username
     AcrPassword                    = azurerm_container_registry.acr.admin_password

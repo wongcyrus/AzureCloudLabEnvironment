@@ -23,7 +23,7 @@ namespace AzureCloudLabEnvironment
         // ReSharper disable once UnusedMember.Global
         public async Task StartLabEventHandlerFunction([QueueTrigger("start-event", Connection = nameof(Config.Key.AzureWebJobsStorage))] Event ev, ILogger log, ExecutionContext executionContext)
         {
-            Lab lab = Lab.FromJson(ev.Context);
+            Lab lab = Lab.FromJson(ev.Context, log);
             log.LogInformation($"StartLabEventHandlerFunction Queue trigger function processed: {ev} => {lab}");
             if (lab == null) return;
             await RunClassInfrastructure(log, executionContext, ev,lab, true);
@@ -32,7 +32,7 @@ namespace AzureCloudLabEnvironment
         [FunctionName(nameof(EndLabEventHandlerFunction))]
         public async Task EndLabEventHandlerFunction([QueueTrigger("end-event", Connection = nameof(Config.Key.AzureWebJobsStorage))] Event ev, ILogger log, ExecutionContext executionContext)
         {
-            Lab lab = Lab.FromJson(ev.Context);
+            Lab lab = Lab.FromJson(ev.Context, log);
             log.LogInformation($"EndLabEventHandlerFunction Queue trigger function processed: {ev} => {lab}");
             if (lab == null) return;
             await RunClassInfrastructure(log, executionContext, ev, lab, false);

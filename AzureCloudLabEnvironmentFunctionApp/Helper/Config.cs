@@ -21,7 +21,6 @@ namespace AzureCloudLabEnvironment.Helper
         {
             AzureWebJobsStorage,
             CalendarUrl,
-            CalendarTimeZone,
             AcrUrl,
             AcrUserName,
             AcrPassword,
