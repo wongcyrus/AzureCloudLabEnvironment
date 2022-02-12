@@ -24,7 +24,7 @@ namespace AzureCloudLabEnvironment.Model
 
         public override string ToString()
         {
-            return $"{Title}({RepeatTimes}) {Type}: {Context}";
+            return $"{Title} [{RepeatTimes}] {Type} ({StartTime} - {EndTime}): {Context}";
         }
     }
 }

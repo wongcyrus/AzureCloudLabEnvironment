@@ -5,7 +5,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Ical.Net;
 using Ical.Net.CalendarComponents;
-using Ical.Net.DataTypes;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
 using System.Linq;
@@ -15,6 +14,8 @@ using Azure.Storage.Queues;
 using AzureCloudLabEnvironment.Dao;
 using AzureCloudLabEnvironment.Helper;
 using AzureCloudLabEnvironment.Model;
+using Ical.Net.DataTypes;
+using TimeZoneConverter;
 
 namespace AzureCloudLabEnvironment
 {
@@ -32,7 +33,7 @@ namespace AzureCloudLabEnvironment
             }
 
             var config = new Config(context);
-            
+
             var calendar = await LoadFromUriAsync(new Uri(config.GetConfig(Config.Key.CalendarUrl)));
             var onGoingEvents = GetOnGoingEvents(calendar, config.GetConfig(Config.Key.CalendarTimeZone), logger);
 
@@ -104,16 +105,35 @@ namespace AzureCloudLabEnvironment
         private static List<OnGoingEvent> GetOnGoingEvents(IGetOccurrences calendar, string calenderTimeZone,
             ILogger logger)
         {
-            const double threshold = 0.5;
+            const double threshold = 1;
 
             var onGoingEvents = new List<OnGoingEvent>();
-            var start = TimeZoneInfo.ConvertTime(DateTime.Now.AddMinutes(-threshold),
-                TimeZoneInfo.FindSystemTimeZoneById(calenderTimeZone));
-            var end = TimeZoneInfo.ConvertTime(DateTime.Now.AddMinutes(threshold),
-                TimeZoneInfo.FindSystemTimeZoneById(calenderTimeZone));
-            var startUtc = DateTime.UtcNow.AddMinutes(-threshold);
-            var endUtc = DateTime.UtcNow.AddMinutes(threshold);
-            var occurrences = calendar.GetOccurrences(startUtc, endUtc);
+            var calendarTimeZone = TZConvert.GetTimeZoneInfo(calenderTimeZone);
+            var now = DateTime.Now;
+            var start = now.AddMinutes(-threshold);
+            var end = now.AddMinutes(threshold);
+
+            //var start = TimeZoneInfo.ConvertTime(DateTime.Now.AddMinutes(-threshold), calendarTimeZone);
+            //var end = TimeZoneInfo.ConvertTime(DateTime.Now.AddMinutes(threshold), calendarTimeZone);
+            //logger.LogInformation("calendarTimeZone: " + calendarTimeZone.Id);
+            var todayOccurrences = calendar.GetOccurrences(start.AddHours(-12), start.AddHours(+12));
+
+            var o = todayOccurrences.Select(c =>
+                 new
+                 {
+                     Event = c,
+                     IsAfterStart = new CalDateTime(c.Period.StartTime) > new CalDateTime(start), //DateTime.Compare(TimeZoneInfo.ConvertTime(c.Period.StartTime.AsUtc, calendarTimeZone), start) > 0,
+                     IsBeforeEnd = new CalDateTime(c.Period.StartTime) < new CalDateTime(end),
+                     //DateTime.Compare(TimeZoneInfo.ConvertTime(c.Period.StartTime.AsUtc, calendarTimeZone), end) < 0
+                 });
+
+            //.Where(c => c.IsAfterStart && c.IsBeforeEnd).Select(c => c.Event);
+            foreach (var e in o)
+            {
+                logger.LogInformation(e.Event.Period.StartTime.AsUtc + "(" + e.IsAfterStart + "," + e.IsBeforeEnd + ")");
+            }
+
+            var occurrences = o.Where(c => c.IsAfterStart && c.IsBeforeEnd).Select(c => c.Event);
 
             string GetRowKey(string summary, DateTime startTime, DateTime endTime) => $"{summary} - From: {startTime.ToLocalTime()} To: {endTime.ToLocalTime()} TimeZone: {TimeZoneInfo.Local.StandardName}";
 

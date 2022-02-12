@@ -13,6 +13,7 @@
     <PackageReference Include="Microsoft.Azure.WebJobs.Extensions.Storage" Version="5.0.0" />
     <PackageReference Include="Microsoft.NET.Sdk.Functions" Version="4.0.1" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
+    <PackageReference Include="TimeZoneConverter" Version="5.0.0" />
   </ItemGroup>
   <ItemGroup>
     <None Update="host.json">

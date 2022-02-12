@@ -133,8 +133,8 @@ namespace AzureCloudLabEnvironment
                 var callbackUrl = $"https://{appName}.azurewebsites.net/api/CallBackFunction?token={token}";
                 individualTerraformVariables.Add("CALLBACK_URL", callbackUrl);
 
-                var previousDeployment = deploymentDao.Get(token);
-                if (isCreate && previousDeployment == null)
+               
+                if (isCreate)
                 {
                     deployment.PartitionKey = token;
                     deployment.RowKey = token;
@@ -143,8 +143,13 @@ namespace AzureCloudLabEnvironment
                 }
                 else
                 {
-                    previousDeployment.Status = "DELETING";
-                    deploymentDao.Update(previousDeployment);
+                    var previousDeployment = deploymentDao.Get(token);
+                    if (previousDeployment != null)
+                    {
+                        previousDeployment.Status = "DELETING";
+                        deploymentDao.Update(previousDeployment);
+                    }
+                   
                     withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance, config, commands, index, labCredential, individualTerraformVariables);
                 }
             }
@@ -157,7 +162,6 @@ namespace AzureCloudLabEnvironment
             log.LogInformation($"Created container group'{containerGroupName}'");
 
             return containerGroup.Id;
-
         }
 
 
