@@ -123,8 +123,9 @@ public class CalenderPollingFunction
                 IsBeforeEnd = new CalDateTime(c.Period.StartTime) < new CalDateTime(end)
             }).ToArray();
 
+        logger.LogInformation("Events between " + start.AddHours(-12) + "and " + start.AddHours(+12));
         foreach (var e in eventsInPeriod)
-            logger.LogInformation(e.Event.Period.StartTime.AsUtc + "(" + e.IsAfterStart + "," + e.IsBeforeEnd + ")");
+            logger.LogInformation(e.Event.Period.StartTime.AsUtc + "(IsAfterStart:" + e.IsAfterStart + ",IsBeforeEnd:" + e.IsBeforeEnd + ")");
 
         var occurrences = eventsInPeriod.Where(c => c.IsAfterStart && c.IsBeforeEnd).Select(c => c.Event);
 

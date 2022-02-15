@@ -123,9 +123,10 @@ public static class StudentRegistrationFunction
 <html lang='en' xmlns='http://www.w3.org/1999/xhtml'>
 <head>
     <meta charset='utf-8' />
-    <title>Azure Grader</title>
+    <title>Azure Cloud Lab Environment</title>
 </head>
 <body>
+    <h1>Azure Cloud Lab Environment</h1>
     {content}
     <footer>
         <p>Developed by <a href='https://www.vtc.edu.hk/admission/en/programme/it114115-higher-diploma-in-cloud-and-data-centre-administration/'> Higher Diploma in Cloud and Data Centre Administration Team.</a></p>

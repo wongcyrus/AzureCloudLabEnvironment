@@ -3,6 +3,7 @@ using System.Runtime.Serialization;
 
 namespace AzureCloudLabEnvironment.Model;
 
+[DataContract]
 public class Event : JsonBase<Event>
 {
     [DataMember] public string Title { get; set; }

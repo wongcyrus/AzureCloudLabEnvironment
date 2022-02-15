@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -8,7 +9,8 @@ using Microsoft.Extensions.Logging;
 
 namespace AzureCloudLabEnvironment.Model;
 
-public class JsonBase<T> where T : class
+[DataContract]
+public abstract class JsonBase<T> where T : class
 {
     public string ToJson()
     {
