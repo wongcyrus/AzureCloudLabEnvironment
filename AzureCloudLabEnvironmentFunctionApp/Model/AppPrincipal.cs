@@ -1,15 +1,13 @@
 ﻿using System.Runtime.Serialization;
 
-namespace AzureCloudLabEnvironment.Model
+namespace AzureCloudLabEnvironment.Model;
+
+// ReSharper disable InconsistentNaming
+[DataContract]
+public class AppPrincipal : JsonBase<AppPrincipal>
 {
-    // ReSharper disable InconsistentNaming
-    [DataContract]
-    public class AppPrincipal
-    {
-        [DataMember] public string appId;
-        [DataMember] public string displayName;
-        [DataMember] public string password;
-        [DataMember] public string tenant;
-    }
-   
+    [DataMember] public string appId;
+    [DataMember] public string displayName;
+    [DataMember] public string password;
+    [DataMember] public string tenant;
 }

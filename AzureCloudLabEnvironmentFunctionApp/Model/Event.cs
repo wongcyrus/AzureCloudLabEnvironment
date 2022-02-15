@@ -1,30 +1,19 @@
 ﻿using System;
-using System.Text.Json;
+using System.Runtime.Serialization;
 
-namespace AzureCloudLabEnvironment.Model
+namespace AzureCloudLabEnvironment.Model;
+
+public class Event : JsonBase<Event>
 {
-    public class Event
+    [DataMember] public string Title { get; set; }
+    [DataMember] public DateTime StartTime { get; set; }
+    [DataMember] public DateTime EndTime { get; set; }
+    [DataMember] public string Context { get; set; }
+    [DataMember] public int RepeatTimes { get; set; }
+    [DataMember] public string Type { get; set; }
+
+    public override string ToString()
     {
-        public string Title { get; set; }
-        public DateTime StartTime { get; set; }
-        public DateTime EndTime { get; set; }
-        public string Context { get; set; }
-        public int RepeatTimes { get; set; }
-        public string Type { get; set; }
-
-        public string ToJson()
-        {
-            return JsonSerializer.Serialize(this);
-        }
-
-        public static Event FromJson(string jsonString)
-        {
-            return JsonSerializer.Deserialize<Event>(jsonString);
-        }
-
-        public override string ToString()
-        {
-            return $"{Title} [{RepeatTimes}] {Type} ({StartTime} - {EndTime}): {Context}";
-        }
+        return $"{Title} [{RepeatTimes}] {Type} ({StartTime} - {EndTime}): {Context}";
     }
 }

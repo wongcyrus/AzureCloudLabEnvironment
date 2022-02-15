@@ -17,15 +17,6 @@ namespace AzureCloudLabEnvironment
 {
     public static class StudentRegistrationFunction
     {
-        private static AppPrincipal ReadToObject(string json)
-        {
-            var appPrincipal = new AppPrincipal();
-            var ms = new MemoryStream(Encoding.UTF8.GetBytes(json));
-            var ser = new DataContractJsonSerializer(appPrincipal.GetType());
-            appPrincipal = ser.ReadObject(ms) as AppPrincipal;
-            ms.Close();
-            return appPrincipal;
-        }
 
         [FunctionName(nameof(StudentRegistrationFunction))]
         // ReSharper disable once UnusedMember.Global
@@ -86,7 +77,7 @@ namespace AzureCloudLabEnvironment
                 var subscriptionDao = new SubscriptionDao(config, log);
                 var labCredentialDao = new LabCredentialDao(config, log);
 
-                var credential = ReadToObject(credentialJsonString);
+                var credential = AppPrincipal.FromJson(credentialJsonString, log);
 
                 var subscription = new Subscription()
                 {
