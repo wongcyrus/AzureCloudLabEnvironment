@@ -2,12 +2,11 @@
 using AzureCloudLabEnvironment.Model;
 using Microsoft.Extensions.Logging;
 
-namespace AzureCloudLabEnvironment.Dao
+namespace AzureCloudLabEnvironment.Dao;
+
+internal class DeploymentDao : Dao<Deployment>
 {
-    internal class DeploymentDao : Dao<Deployment>
+    public DeploymentDao(Config config, ILogger logger) : base(config, logger)
     {
-        public DeploymentDao(Config config, ILogger logger) : base(config, logger)
-        {
-        }
     }
 }

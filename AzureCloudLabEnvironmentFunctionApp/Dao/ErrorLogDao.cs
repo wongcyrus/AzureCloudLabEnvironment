@@ -2,12 +2,11 @@
 using AzureCloudLabEnvironment.Model;
 using Microsoft.Extensions.Logging;
 
-namespace AzureCloudLabEnvironment.Dao
+namespace AzureCloudLabEnvironment.Dao;
+
+internal class ErrorLogDao : Dao<ErrorLog>
 {
-    internal class ErrorLogDao: Dao<ErrorLog>
+    public ErrorLogDao(Config config, ILogger logger) : base(config, logger)
     {
-        public ErrorLogDao(Config config, ILogger logger) : base(config, logger)
-        {
-        }
     }
 }

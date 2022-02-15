@@ -2,44 +2,43 @@
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
 
-namespace AzureCloudLabEnvironment.Helper
+namespace AzureCloudLabEnvironment.Helper;
+
+public class Config
 {
-    public class Config
+    public enum Key
     {
-        private readonly IConfigurationRoot _config;
+        AzureWebJobsStorage,
+        CalendarUrl,
+        AcrUrl,
+        AcrUserName,
+        AcrPassword,
+        TerraformResourceGroupName,
+        EmailSmtp,
+        EmailUserName,
+        EmailPassword,
+        EmailFromAddress,
+        AdminEmail,
+        Environment,
+        StorageAccountName,
+        StorageAccountKey,
+        Salt
+    }
 
-        public Config(ExecutionContext context)
-        {
-            _config = new ConfigurationBuilder()
-                .SetBasePath(context.FunctionAppDirectory)
-                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
-                .AddEnvironmentVariables()
-                .Build();
-        }
+    private readonly IConfigurationRoot _config;
 
-        public enum Key
-        {
-            AzureWebJobsStorage,
-            CalendarUrl,
-            AcrUrl,
-            AcrUserName,
-            AcrPassword,
-            TerraformResourceGroupName,
-            EmailSmtp,
-            EmailUserName,
-            EmailPassword,
-            EmailFromAddress,
-            AdminEmail,
-            Environment,
-            StorageAccountName,
-            StorageAccountKey,
-            Salt
-        };
+    public Config(ExecutionContext context)
+    {
+        _config = new ConfigurationBuilder()
+            .SetBasePath(context.FunctionAppDirectory)
+            .AddJsonFile("local.settings.json", true, true)
+            .AddEnvironmentVariables()
+            .Build();
+    }
 
-        public string GetConfig( Key key)
-        {
-            var name = Enum.GetName(typeof(Key), key);
-            return _config[name];
-        }
+    public string GetConfig(Key key)
+    {
+        var name = Enum.GetName(typeof(Key), key);
+        return _config[name];
     }
 }
