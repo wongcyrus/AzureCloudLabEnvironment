@@ -119,7 +119,6 @@ resource "null_resource" "function_app_publish" {
     data.archive_file.azure_function_deployment_package
   ]
   triggers = {
-    source_md5           = filemd5(data.archive_file.azure_function_deployment_package.output_path)
     publish_code_command = local.publish_code_command
     build_number         = "${timestamp()}"
   }
