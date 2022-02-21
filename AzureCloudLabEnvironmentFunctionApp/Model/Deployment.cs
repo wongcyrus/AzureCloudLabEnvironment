@@ -10,6 +10,8 @@ internal class Deployment : ITableEntity
 {
     public string Email { get; set; }
     public string Name { get; set; }
+    public string Location { get; set; }
+    public string CallbackUrl { get; set; }
     public string GitHubRepo { get; set; }
     public string Branch { get; set; }
     public int RepeatedTimes { get; set; }

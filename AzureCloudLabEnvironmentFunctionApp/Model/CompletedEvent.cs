@@ -8,7 +8,7 @@ internal class CompletedEvent : ITableEntity
 {
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
-
+    public string Location { get; set; }
     public string Context { get; set; }
     public string PartitionKey { get; set; }
     public string RowKey { get; set; }

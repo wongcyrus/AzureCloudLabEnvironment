@@ -28,8 +28,8 @@ public class CalenderPollingFunction
     {
         if (timer.IsPastDue)
         {
-            logger.LogInformation("Skip for past due.");
-            return;
+           logger.LogInformation("Skip for past due.");
+           return;
         }
 
         var config = new Config(context);
@@ -61,6 +61,7 @@ public class CalenderPollingFunction
                 StartTime = newEvent.StartTime,
                 EndTime = newEvent.EndTime,
                 Context = newEvent.Context,
+                Location = newEvent.Location,
                 RepeatTimes = completedEventDao.GetRepeatCount(newEvent.PartitionKey),
                 Type = "START"
             };
@@ -77,6 +78,7 @@ public class CalenderPollingFunction
                 StartTime = endedEvent.StartTime,
                 EndTime = endedEvent.EndTime,
                 Context = endedEvent.Context,
+                Location = endedEvent.Location,
                 RepeatTimes = completedEventDao.GetRepeatCount(endedEvent.PartitionKey),
                 Type = "END"
             };
@@ -86,12 +88,13 @@ public class CalenderPollingFunction
             var completedEvent = new CompletedEvent
             {
                 Context = endedEvent.Context,
-                ETag = ETag.All,
+                Location = endedEvent.Location,
                 EndTime = endedEvent.EndTime,
                 PartitionKey = endedEvent.PartitionKey,
                 RowKey = endedEvent.RowKey,
                 StartTime = endedEvent.StartTime,
-                Timestamp = endedEvent.Timestamp
+                Timestamp = endedEvent.Timestamp,
+                ETag = ETag.All,
             };
 
             completedEventDao.Upsert(completedEvent);
@@ -140,7 +143,7 @@ public class CalenderPollingFunction
             var startTime = occurrence.Period.StartTime.AsUtc;
             var endTime = occurrence.Period.EndTime.AsUtc;
 
-            string pk, rk, description;
+            string pk, rk, description,location;
 
             switch (occurrence.Source)
             {
@@ -148,11 +151,13 @@ public class CalenderPollingFunction
                     pk = rc.Summary;
                     rk = GetRowKey(rc.Summary, startTime, endTime);
                     description = rc.Description;
+                    location = rc.Properties.Get<string>("LOCATION");
                     break;
                 case ICalendarComponent ev:
                     pk = ev.Properties["SUMMARY"].Value as string;
                     rk = GetRowKey(ev.Properties["SUMMARY"].Value as string, startTime, endTime);
                     description = ev.Properties["DESCRIPTION"].Value as string;
+                    location = ev.Properties["LOCATION"].Value as string;
                     break;
                 default:
                     continue;
@@ -168,7 +173,8 @@ public class CalenderPollingFunction
                 RowKey = rk,
                 StartTime = startTime,
                 EndTime = endTime,
-                Context = description
+                Context = description,
+                Location = location
             });
         }
 

@@ -43,6 +43,7 @@ public class LabEventFunction
         bool isCreate)
     {
         lab.Name = ev.Title;
+        lab.Location = ev.Location;
         lab.RepeatedTimes = ev.RepeatTimes;
         lab.Branch = lab.Branch.Replace("###RepeatedTimes###", lab.RepeatedTimes.ToString());
         var action = isCreate ? "Create" : "Delete";
@@ -56,6 +57,7 @@ public class LabEventFunction
         var terraformVariables = new Dictionary<string, string>
         {
             {"LAB", lab.Name},
+            {"LOCATION", lab.Location},
             {"BRANCH", lab.Branch},
             {"REPEAT_TIMES", lab.RepeatedTimes.ToString()}
         };
@@ -125,8 +127,10 @@ public class LabEventFunction
             var deployment = new Deployment
             {
                 Name = lab.Name,
+                Location = lab.Location,
                 Branch = lab.Branch,
                 Email = labCredential.Email,
+                CallbackUrl = lab.CallbackUrl,
                 RepeatedTimes = lab.RepeatedTimes ?? 0,
                 GitHubRepo = lab.GitHubRepo,
                 Status = "CREATING"

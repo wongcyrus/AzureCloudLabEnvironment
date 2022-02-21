@@ -1,4 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
+using System.Net;
+using System.Net.Http;
 using System.Threading.Tasks;
 using AzureCloudLabEnvironment.Dao;
 using AzureCloudLabEnvironment.Helper;
@@ -15,7 +20,7 @@ public static class CallBackFunction
 {
     [FunctionName(nameof(CallBackFunction))]
     // ReSharper disable once UnusedMember.Global
-    public static Task<IActionResult> Run(
+    public static async Task<IActionResult> Run(
         [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)]
         HttpRequest req,
         ILogger log, ExecutionContext context)
@@ -27,11 +32,11 @@ public static class CallBackFunction
 
         var deployment = deploymentDao.Get(token);
         if (deployment == null)
-            return Task.FromResult<IActionResult>(new OkObjectResult("Invalid token!"));
+            return await Task.FromResult<IActionResult>(new OkObjectResult("Invalid token!"));
         if (deployment.Status == "CREATING")
         {
             var stream = req.Body;
-            var output = new StreamReader(stream).ReadToEnd();
+            var output = await new StreamReader(stream).ReadToEndAsync();
             deployment.Output = output;
             deployment.Status = "CREATED";
             deploymentDao.Update(deployment);
@@ -51,11 +56,13 @@ Azure Cloud Lab Environment
                 Body = body
             };
             var emailClient = new Email(config, log);
-            emailClient.Send(emailMessage, new[] {Email.StringToAttachment(output, "output.txt", "text/plain")});
+            emailClient.Send(emailMessage, new[] { Email.StringToAttachment(output, "output.txt", "text/plain") });
             log.LogInformation(
                 $"Sent CREATED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
 
-            return Task.FromResult<IActionResult>(new OkObjectResult(output));
+            await SendCallBack(deployment, log);
+
+            return await Task.FromResult<IActionResult>(new OkObjectResult(output));
         }
 
         if (deployment.Status == "DELETING")
@@ -80,10 +87,32 @@ Azure Cloud Lab Environment
             emailClient.Send(emailMessage, null);
             log.LogInformation(
                 $"Sent DELETED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
-
-            return Task.FromResult<IActionResult>(new OkObjectResult(deployment));
+            await SendCallBack(deployment, log);
+            return await Task.FromResult<IActionResult>(new OkObjectResult(deployment));
         }
 
-        return Task.FromResult<IActionResult>(new OkObjectResult("Unknown status!"));
+        return await Task.FromResult<IActionResult>(new OkObjectResult("Unknown status!"));
+    }
+
+    private static async Task SendCallBack(Deployment deployment, ILogger log)
+    {
+        if (!string.IsNullOrEmpty(deployment.CallbackUrl))
+        {
+            using var client = new HttpClient();
+            var values = new Dictionary<string, string>
+            {
+                {"Status", deployment.Status},
+                {"Output", deployment.Output}
+            };
+            try
+            {
+                await client.PostAsync(deployment.CallbackUrl, new FormUrlEncodedContent(values));
+            }
+            catch (Exception ex)
+            {
+                log.LogError("SendCallBack Error.");
+                log.LogError(ex.Message);
+            }
+        }
     }
 }
