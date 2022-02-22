@@ -96,7 +96,7 @@ Azure Cloud Lab Environment
 
     private static async Task SendCallBack(Deployment deployment, ILogger log)
     {
-        if (!string.IsNullOrEmpty(deployment.CallbackUrl))
+        if (!string.IsNullOrEmpty(deployment.LifeCycleHookUrl))
         {
             using var client = new HttpClient();
             var values = new Dictionary<string, string>
@@ -106,7 +106,9 @@ Azure Cloud Lab Environment
             };
             try
             {
-                await client.PostAsync(deployment.CallbackUrl, new FormUrlEncodedContent(values));
+                await client.PostAsync(deployment.LifeCycleHookUrl, new FormUrlEncodedContent(values));
+                log.LogInformation(
+                    $"Sent {deployment.Status} Callback to {deployment.LifeCycleHookUrl}");
             }
             catch (Exception ex)
             {

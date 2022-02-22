@@ -66,7 +66,7 @@ public class LabEventFunction
 
         string GetContainerGroupName(int i, string labName)
         {
-            return "container-" + i + "-" + Regex.Replace(labName, @"[^0-9a-zA-Z]+", "-").Trim();
+            return "container-" + i + "-" + Regex.Replace(labName, @"[^0-9a-zA-Z]+", "-").Trim() + "-" + action;
         }
 
         var tasks = Enumerable.Range(0, subStudentGroup.Count)
@@ -130,7 +130,7 @@ public class LabEventFunction
                 Location = lab.Location,
                 Branch = lab.Branch,
                 Email = labCredential.Email,
-                CallbackUrl = lab.CallbackUrl,
+                LifeCycleHookUrl = lab.LifeCycleHookUrl,
                 RepeatedTimes = lab.RepeatedTimes ?? 0,
                 GitHubRepo = lab.GitHubRepo,
                 Status = "CREATING"
@@ -147,6 +147,12 @@ public class LabEventFunction
 
             if (isCreate)
             {
+                var previousDeployment = deploymentDao.Get(token);
+                if (previousDeployment != null)
+                {
+                    log.LogInformation($"Skip to create repeated deployment '{deployment}'");
+                    continue;
+                };
                 deployment.PartitionKey = token;
                 deployment.RowKey = token;
                 deploymentDao.Add(deployment);
@@ -167,7 +173,11 @@ public class LabEventFunction
             }
         }
 
-        if (withNextContainerInstance == null) return "";
+        if (withNextContainerInstance == null)
+        {
+            log.LogInformation($"No ContainerInstance and skip to create '{containerGroupName}'");
+            return "";
+        }
         containerGroup = withNextContainerInstance
             .WithRestartPolicy(ContainerGroupRestartPolicy.Never)
             .WithDnsPrefix(containerGroupName)
