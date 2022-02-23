@@ -144,10 +144,9 @@ public class LabEventFunction
             var callbackUrl = $"https://{appName}.azurewebsites.net/api/CallBackFunction?token={token}";
             individualTerraformVariables.Add("CALLBACK_URL", callbackUrl);
 
-
+            var previousDeployment = deploymentDao.Get(token);
             if (isCreate)
             {
-                var previousDeployment = deploymentDao.Get(token);
                 if (previousDeployment != null)
                 {
                     log.LogInformation($"Skip to create repeated deployment '{deployment}'");
@@ -158,16 +157,16 @@ public class LabEventFunction
                 deploymentDao.Add(deployment);
                 withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
                     config, commands, index, labCredential, individualTerraformVariables);
+                await LifeCycleHook.SendCallBack(deployment, log);
             }
             else
             {
-                var previousDeployment = deploymentDao.Get(token);
                 if (previousDeployment != null)
                 {
                     previousDeployment.Status = "DELETING";
                     deploymentDao.Update(previousDeployment);
+                    await LifeCycleHook.SendCallBack(previousDeployment, log);
                 }
-
                 withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
                     config, commands, index, labCredential, individualTerraformVariables);
             }
