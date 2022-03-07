@@ -41,7 +41,9 @@ public static class CallBackFunction
             deployment.Status = "CREATED";
             deploymentDao.Update(deployment);
 
-            var body = $@"
+            if (string.IsNullOrEmpty(deployment.LifeCycleHookUrl))
+            {
+                var body = $@"
 Dear Student,
 
 {output}
@@ -49,19 +51,21 @@ Dear Student,
 Regards,
 Azure Cloud Lab Environment
 ";
-            var emailMessage = new EmailMessage
+                var emailMessage = new EmailMessage
+                {
+                    To = deployment.Email,
+                    Subject = $"Your lab deployment of {deployment.Name} session {deployment.RepeatedTimes} is ready",
+                    Body = body
+                };
+                var emailClient = new Email(config, log);
+                emailClient.Send(emailMessage, new[] { Email.StringToAttachment(output, "output.txt", "text/plain") });
+                log.LogInformation(
+                    $"Sent CREATED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
+            }
+            else
             {
-                To = deployment.Email,
-                Subject = $"Your lab deployment of {deployment.Name} session {deployment.RepeatedTimes} is ready",
-                Body = body
-            };
-            var emailClient = new Email(config, log);
-            emailClient.Send(emailMessage, new[] { Email.StringToAttachment(output, "output.txt", "text/plain") });
-            log.LogInformation(
-                $"Sent CREATED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
-
-            await SendCallBack(deployment, log);
-
+                await SendCallBack(deployment, log);
+            }
             return await Task.FromResult<IActionResult>(new OkObjectResult(output));
         }
 
@@ -69,7 +73,9 @@ Azure Cloud Lab Environment
         {
             deployment.Status = "DELETED";
             deploymentDao.Update(deployment);
-            var body = @"
+            if (string.IsNullOrEmpty(deployment.LifeCycleHookUrl))
+            {
+                var body = @"
 Dear Student,
 
 Your lab infrastructure has been deleted!
@@ -77,17 +83,21 @@ Your lab infrastructure has been deleted!
 Regards,
 Azure Cloud Lab Environment
 ";
-            var emailMessage = new EmailMessage
+                var emailMessage = new EmailMessage
+                {
+                    To = deployment.Email,
+                    Subject = $"Your lab deployment of {deployment.Name} session {deployment.RepeatedTimes} has deleted.",
+                    Body = body
+                };
+                var emailClient = new Email(config, log);
+                emailClient.Send(emailMessage, null);
+                log.LogInformation(
+                    $"Sent DELETED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
+            }
+            else
             {
-                To = deployment.Email,
-                Subject = $"Your lab deployment of {deployment.Name} session {deployment.RepeatedTimes} has deleted.",
-                Body = body
-            };
-            var emailClient = new Email(config, log);
-            emailClient.Send(emailMessage, null);
-            log.LogInformation(
-                $"Sent DELETED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
-            await SendCallBack(deployment, log);
+                await SendCallBack(deployment, log);
+            }
             return await Task.FromResult<IActionResult>(new OkObjectResult(deployment));
         }
 
