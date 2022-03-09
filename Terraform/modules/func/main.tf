@@ -145,7 +145,7 @@ resource "azurerm_container_registry_task" "build_terraform_image_task" {
     image_names          = ["terraformazurecli:latest"]
     arguments = {
       AZURE_CLI_VERSION = "2.32.0"
-      TERRAFORM_VERSION = "1.1.4"
+      TERRAFORM_VERSION = "1.1.7"
     }
   }
 }

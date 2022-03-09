@@ -16,6 +16,7 @@ namespace AzureCloudLabEnvironment;
 // ReSharper disable once UnusedMember.Global
 public class LabEventFunction
 {
+    [Timeout("00:10:00")]
     [FunctionName(nameof(StartLabEventHandlerFunction))]
     // ReSharper disable once UnusedMember.Global
     public async Task StartLabEventHandlerFunction(
@@ -28,6 +29,7 @@ public class LabEventFunction
         await RunClassInfrastructure(log, executionContext, ev, lab, true);
     }
 
+    [Timeout("00:10:00")]
     [FunctionName(nameof(EndLabEventHandlerFunction))]
     public async Task EndLabEventHandlerFunction(
         [QueueTrigger("end-event", Connection = nameof(Config.Key.AzureWebJobsStorage))] Event ev, ILogger log,
@@ -62,17 +64,17 @@ public class LabEventFunction
             {"REPEAT_TIMES", lab.RepeatedTimes.ToString()}
         };
 
-        var subStudentGroup = students.Chunk(10).ToList();
+        var subStudentGroup = students.Chunk(10).ToArray();
 
         string GetContainerGroupName(int i, string labName)
         {
-            return "container-" + i + "-" + Regex.Replace(labName, @"[^0-9a-zA-Z]+", "-").Trim() + "-" + action;
+            return "container-" + Regex.Replace(labName, @"[^0-9a-zA-Z]+", "-").Trim() + "-" + action + "-" + i;
         }
 
-        var tasks = Enumerable.Range(0, subStudentGroup.Count)
+        var tasks = Enumerable.Range(0, subStudentGroup.Length)
             .Select(i => RunTerraformWithContainerGroupAsync(config, log, lab, isCreate,
                 GetContainerGroupName(i, lab.Name),
-                new Dictionary<string, string>(terraformVariables), subStudentGroup.ElementAt(i)));
+                new Dictionary<string, string>(terraformVariables), subStudentGroup[i]));
         await Task.WhenAll(tasks);
     }
 
@@ -82,7 +84,7 @@ public class LabEventFunction
         Lab lab,
         bool isCreate,
         string containerGroupName,
-        IDictionary<string, string> terraformVariables, LabCredential[] labCredentials)
+        IDictionary<string, string> terraformVariables, IReadOnlyList<LabCredential> labCredentials)
     {
         var resourceGroupName = config.GetConfig(Config.Key.TerraformResourceGroupName);
         var azure = await Helper.Azure.Get();
@@ -121,7 +123,7 @@ public class LabEventFunction
 
         var deploymentDao = new DeploymentDao(config, log);
         IWithNextContainerInstance withNextContainerInstance = null;
-        for (var index = 0; index < labCredentials.Length; index++)
+        for (var index = 0; index < labCredentials.Count; index++)
         {
             var labCredential = labCredentials[index];
             var deployment = new Deployment
@@ -149,7 +151,7 @@ public class LabEventFunction
             {
                 if (previousDeployment != null)
                 {
-                    log.LogInformation($"Skip to create repeated deployment '{deployment}'");
+                    log.LogInformation($"Skip to create repeated deployment {token} '{previousDeployment}' <=> {deployment}'");
                     continue;
                 };
                 deployment.PartitionKey = token;
@@ -200,6 +202,7 @@ public class LabEventFunction
             return container.WithImage(config.GetConfig(Config.Key.AcrUrl) + "/terraformazurecli:latest")
                 .WithExternalTcpPort(80 + index)
                 .WithMemorySizeInGB(0.5)
+                .WithCpuCoreCount(0.25)
                 .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_ID", labCredential.AppId)
                 .WithEnvironmentVariableWithSecuredValue("ARM_CLIENT_SECRET", labCredential.Password)
                 .WithEnvironmentVariableWithSecuredValue("ARM_SUBSCRIPTION_ID", labCredential.SubscriptionId)
