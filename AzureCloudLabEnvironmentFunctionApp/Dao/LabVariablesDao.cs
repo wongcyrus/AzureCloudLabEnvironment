@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Azure;
@@ -23,28 +22,18 @@ namespace AzureCloudLabEnvironment.Dao
         private readonly BlobServiceClient _blobServiceClient;
         private DataTable _labVariables;
 
-
         public LabVariablesDao(Config config, ILogger logger)
         {
             _config = config;
             _logger = logger;
-
             _blobServiceClient = new BlobServiceClient(config.GetConfig(Config.Key.AzureWebJobsStorage));
-
-        }
-
-        public LabVariablesDao(string s)
-        {
-
-            _blobServiceClient = new BlobServiceClient(s);
-
         }
 
         public async Task<bool> LoadVariables(Lab lab)
         {
             var containerClient = _blobServiceClient.GetBlobContainerClient("lab-variables");
-            var blobClientForSpecificLab = containerClient.GetBlobClient(lab.Name + "/variables_" + lab.RepeatedTimes + "_.xlsx");
-            var blobClientForEveryLab = containerClient.GetBlobClient(lab.Name + "/variables.xlsx");
+            var blobClientForSpecificLab = containerClient.GetBlobClient(lab.Name + "_" + lab.RepeatedTimes + "_.xlsx");
+            var blobClientForEveryLab = containerClient.GetBlobClient(lab.Name + ".xlsx");
             Response<BlobDownloadResult> content;
             if (await blobClientForSpecificLab.ExistsAsync())
             {
