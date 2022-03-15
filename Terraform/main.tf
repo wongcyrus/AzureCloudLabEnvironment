@@ -32,7 +32,7 @@ resource "azurerm_storage_container" "deployments" {
   container_access_type = "private"
 }
 
-resource "azurerm_storage_container" "example" {
+resource "azurerm_storage_container" "lab-variables" {
   name                  = "lab-variables"
   storage_account_name  = azurerm_storage_account.storage.name
   container_access_type = "private"
@@ -86,6 +86,7 @@ resource "azurerm_storage_share" "container_share" {
 
 module "func" {
   source                    = "./modules/func"
+  APP_NAME                  = var.APP_NAME
   LOCATION                  = var.LOCATION
   RESOURCE_GROUP            = azurerm_resource_group.func-rg
   ENVIRONMENT               = var.ENVIRONMENT
