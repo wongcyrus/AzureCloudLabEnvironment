@@ -1,4 +1,6 @@
 # Azure Cloud Lab Environment
+[Please read this Microsoft Tech Blog for more details](https://techcommunity.microsoft.com/t5/educator-developer-blog/azure-cloud-lab-environment/ba-p/3251380)
+
 Azure Cloud Lab Environment is aims to facilitate educators using Azure in their teaching. Using Azure, educators can create the tailor-made lab environment for every student, and it is very important during the pandemic as students cannot back to school and they do not have a good PC at home. On the other hand, students need to work on some complicate deployment projects to learn Azure across the semester. Two main problems – the First is the project cost to continue running the project for a few months, and the second there is no check point for students. In case, a student done something wrong in middle of semester, then he must redo everything or just give up the project. As a result, it limits the scale of student lab project exercise.
 My working group (students) of Hong Kong Institute of Vocational Education (IVE) has built up the Azure Cloud Lab Environment, and widely adopted in the teaching of IT114115 Higher Diploma in Cloud and Data Centre Administration. 
 
