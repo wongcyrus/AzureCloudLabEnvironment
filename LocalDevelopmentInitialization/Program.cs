@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Table;
 
 
@@ -23,15 +24,13 @@ foreach (var queueName in queues)
     await queue.CreateIfNotExistsAsync();
 }
 
+var cloudBlobClient = storageAcc.CreateCloudBlobClient();
+var blobs = new[] { "lab-variables" };
+
+foreach (var containerName in blobs)
+{
+    var container = cloudBlobClient.GetContainerReference(containerName);
+    await container.CreateIfNotExistsAsync();
+}
 Console.WriteLine("Created Local Azure Storage Account resources.");
-
-//CloudBlobClient cloudBlobClient = storageAcc.CreateCloudBlobClient();
-//var blobs = new[] {  };
-
-//foreach (var containerName in blobs)
-//{
-//    var container = cloudBlobClient.GetContainerReference(containerName);
-//    await container.CreateIfNotExistsAsync();
-//}
-
 

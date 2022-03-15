@@ -32,6 +32,12 @@ resource "azurerm_storage_container" "deployments" {
   container_access_type = "private"
 }
 
+resource "azurerm_storage_container" "example" {
+  name                  = "lab-variables"
+  storage_account_name  = azurerm_storage_account.storage.name
+  container_access_type = "private"
+}
+
 resource "azurerm_storage_table" "on_going_events" {
   name                 = "OnGoingEvent"
   storage_account_name = azurerm_storage_account.storage.name
