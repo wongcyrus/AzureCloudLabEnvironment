@@ -10,6 +10,7 @@ using Microsoft.Azure.Management.ContainerInstance.Fluent.ContainerGroup.Definit
 using Microsoft.Azure.Management.ContainerInstance.Fluent.Models;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 
 namespace AzureCloudLabEnvironment;
 
@@ -54,7 +55,16 @@ public class LabEventFunction
         var config = new Config(context);
         var labCredentialDao = new LabCredentialDao(config, log);
 
+        var labVariablesDao = new LabVariablesDao(config, log);
+        var foundStudentVariables = await labVariablesDao.LoadVariables(lab);
+
         var students = labCredentialDao.GetByLab(lab.Name);
+
+        students = students.Select(c =>
+        {
+            c.Variables = labVariablesDao.GetVariables(c.Email);
+            return c;
+        }).ToList();
 
         var terraformVariables = new Dictionary<string, string>
         {
@@ -135,13 +145,20 @@ public class LabEventFunction
                 LifeCycleHookUrl = lab.LifeCycleHookUrl,
                 RepeatedTimes = lab.RepeatedTimes ?? 0,
                 GitHubRepo = lab.GitHubRepo,
+                Variables = JsonConvert.SerializeObject(labCredential.Variables),
                 Status = "CREATING"
             };
             var token = deployment.GetToken(config.GetConfig(Config.Key.Salt));
 
             var individualTerraformVariables = new Dictionary<string, string>(terraformVariables)
                 {{"EMAIL", labCredential.Email}};
-
+            foreach (var labCredentialVariable in labCredential.Variables)
+            {
+                if (individualTerraformVariables.ContainsKey(labCredentialVariable.Key))
+                    individualTerraformVariables[labCredentialVariable.Key] = labCredentialVariable.Value;
+                else
+                    individualTerraformVariables.Add(labCredentialVariable.Key,labCredentialVariable.Value);
+            }
             var appName = Environment.ExpandEnvironmentVariables("%WEBSITE_SITE_NAME%");
             var callbackUrl = $"https://{appName}.azurewebsites.net/api/CallBackFunction?token={token}";
             individualTerraformVariables.Add("CALLBACK_URL", callbackUrl);

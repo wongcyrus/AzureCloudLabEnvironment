@@ -15,6 +15,7 @@ internal class Deployment : ITableEntity
     public string GitHubRepo { get; set; }
     public string Branch { get; set; }
     public int RepeatedTimes { get; set; }
+    public string Variables { get; set; }
     public string Output { get; set; }
     public string Status { get; set; }
 

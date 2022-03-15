@@ -56,7 +56,7 @@ public static class StudentRegistrationFunction
             string subscriptionId = req.Form["subscriptionId"];
             string credentialJsonString = req.Form["credentials"];
             log.LogInformation("Student Register: " + email + " Lab:" + lab);
-            if (string.IsNullOrWhiteSpace(lab) || string.IsNullOrWhiteSpace(email) ||
+            if (string.IsNullOrWhiteSpace(email) ||
                 string.IsNullOrWhiteSpace(subscriptionId) ||
                 string.IsNullOrWhiteSpace(credentialJsonString))
                 return GetContentResult("Missing Data and Registration Failed!");
@@ -71,6 +71,10 @@ public static class StudentRegistrationFunction
 
             var credential = AppPrincipal.FromJson(credentialJsonString, log);
 
+            if (string.IsNullOrWhiteSpace(lab))
+            {
+                lab = email.ToLower().Trim();
+            }
             var subscription = new Subscription
             {
                 PartitionKey = lab,
@@ -90,7 +94,7 @@ public static class StudentRegistrationFunction
                 Password = credential.password,
                 Tenant = credential.tenant,
                 SubscriptionId = subscriptionId,
-                Email = email
+                Email = email.ToLower().Trim()
             };
 
             if (!await Helper.Azure.IsValidSubscriptionContributorRole(labCredential, subscriptionId))

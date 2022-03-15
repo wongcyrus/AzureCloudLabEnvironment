@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
 using Azure;
-using Azure.Data.Tables;
+using Microsoft.WindowsAzure.Storage.Table;
+using ITableEntity = Azure.Data.Tables.ITableEntity;
 
 namespace AzureCloudLabEnvironment.Model;
 
@@ -17,4 +19,6 @@ internal class LabCredential : ITableEntity
     public string RowKey { get; set; }
     public DateTimeOffset? Timestamp { get; set; }
     public ETag ETag { get; set; }
+
+    [IgnoreProperty] public Dictionary<string, string> Variables { get; set; }
 }

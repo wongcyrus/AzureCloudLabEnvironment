@@ -16,6 +16,6 @@ internal class LabCredentialDao : Dao<LabCredential>
     {
         var oDataQueryEntities =
             TableClient.Query<LabCredential>(c => c.PartitionKey == lab);
-        return oDataQueryEntities.ToList();
+        return oDataQueryEntities.OrderBy(c => c.Email).ToList();
     }
 }

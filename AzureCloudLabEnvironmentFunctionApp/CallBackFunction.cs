@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using AzureCloudLabEnvironment.Dao;
@@ -112,6 +110,7 @@ Azure Cloud Lab Environment
             var values = new Dictionary<string, string>
             {
                 {"Status", deployment.Status},
+                {"Variables", deployment.Variables},
                 {"Output", deployment.Output}
             };
             try
