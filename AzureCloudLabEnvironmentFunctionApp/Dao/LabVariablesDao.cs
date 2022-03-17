@@ -54,9 +54,6 @@ namespace AzureCloudLabEnvironment.Dao
                     UseHeaderRow = true
                 }
             });
-
-            _labVariables = new DataTable();
-
             _labVariables = result.Tables[0];
             return true;
         }

@@ -16,6 +16,8 @@ internal class Deployment : ITableEntity
     public string Branch { get; set; }
     public int RepeatedTimes { get; set; }
     public string Variables { get; set; }
+
+    public string ExternalVariables { get; set; }
     public string Output { get; set; }
     public string Status { get; set; }
 
@@ -26,7 +28,7 @@ internal class Deployment : ITableEntity
 
     public override string ToString()
     {
-        return $"{Name}[{RepeatedTimes}] {Branch} -> {Email}";
+        return $"{Name}[{RepeatedTimes}] {Branch} -> {Email} {Status}";
     }
 
     public string GetToken(string salt)

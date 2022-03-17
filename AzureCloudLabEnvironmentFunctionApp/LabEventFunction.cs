@@ -57,6 +57,7 @@ public class LabEventFunction
 
         var labVariablesDao = new LabVariablesDao(config, log);
         var foundStudentVariables = await labVariablesDao.LoadVariables(lab);
+        log.LogInformation("foundStudentVariables:" + foundStudentVariables);
 
         var students = labCredentialDao.GetByLab(lab.Name);
 
@@ -146,6 +147,7 @@ public class LabEventFunction
                 RepeatedTimes = lab.RepeatedTimes ?? 0,
                 GitHubRepo = lab.GitHubRepo,
                 Variables = JsonConvert.SerializeObject(labCredential.Variables),
+                Output = "{}",
                 Status = "CREATING"
             };
             var token = deployment.GetToken(config.GetConfig(Config.Key.Salt));
@@ -157,7 +159,7 @@ public class LabEventFunction
                 if (individualTerraformVariables.ContainsKey(labCredentialVariable.Key))
                     individualTerraformVariables[labCredentialVariable.Key] = labCredentialVariable.Value;
                 else
-                    individualTerraformVariables.Add(labCredentialVariable.Key,labCredentialVariable.Value);
+                    individualTerraformVariables.Add(labCredentialVariable.Key, labCredentialVariable.Value);
             }
             var appName = Environment.ExpandEnvironmentVariables("%WEBSITE_SITE_NAME%");
             var callbackUrl = $"https://{appName}.azurewebsites.net/api/CallBackFunction?token={token}";
@@ -173,10 +175,18 @@ public class LabEventFunction
                 };
                 deployment.PartitionKey = token;
                 deployment.RowKey = token;
+
+                var externalParameters = await LifeCycleHook.SendCallBack(deployment, log);
+                foreach (var key in externalParameters.Keys.Where(key => !individualTerraformVariables.ContainsKey(key)))
+                {
+                    individualTerraformVariables.Add(key, externalParameters[key]);
+                }
+                deployment.ExternalVariables = JsonConvert.SerializeObject(externalParameters);
                 deploymentDao.Add(deployment);
+
                 withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
                     config, commands, index, labCredential, individualTerraformVariables);
-                await LifeCycleHook.SendCallBack(deployment, log);
+
             }
             else
             {
@@ -185,6 +195,12 @@ public class LabEventFunction
                     previousDeployment.Status = "DELETING";
                     deploymentDao.Update(previousDeployment);
                     await LifeCycleHook.SendCallBack(previousDeployment, log);
+
+                    var externalParameters = JsonConvert.DeserializeObject<Dictionary<string, string>>(previousDeployment.ExternalVariables);
+                    foreach (var key in externalParameters.Keys.Where(key => !individualTerraformVariables.ContainsKey(key)))
+                    {
+                        individualTerraformVariables.Add(key, externalParameters[key]);
+                    }
                 }
                 withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
                     config, commands, index, labCredential, individualTerraformVariables);
