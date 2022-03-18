@@ -1,6 +1,5 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Blob;
 using Microsoft.WindowsAzure.Storage.Table;
 
 

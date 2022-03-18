@@ -176,12 +176,12 @@ public class LabEventFunction
                 deployment.PartitionKey = token;
                 deployment.RowKey = token;
 
-                var externalParameters = await LifeCycleHook.SendCallBack(deployment, log);
-                foreach (var key in externalParameters.Keys.Where(key => !individualTerraformVariables.ContainsKey(key)))
+                var externalVariables = await LifeCycleHook.SendCallBack(deployment, log);
+                foreach (var key in externalVariables.Keys.Where(key => !individualTerraformVariables.ContainsKey(key)))
                 {
-                    individualTerraformVariables.Add(key, externalParameters[key]);
+                    individualTerraformVariables.Add(key, externalVariables[key]);
                 }
-                deployment.ExternalVariables = JsonConvert.SerializeObject(externalParameters);
+                deployment.ExternalVariables = JsonConvert.SerializeObject(externalVariables);
                 deploymentDao.Add(deployment);
 
                 withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
@@ -195,11 +195,12 @@ public class LabEventFunction
                     previousDeployment.Status = "DELETING";
                     deploymentDao.Update(previousDeployment);
                     await LifeCycleHook.SendCallBack(previousDeployment, log);
-
-                    var externalParameters = JsonConvert.DeserializeObject<Dictionary<string, string>>(previousDeployment.ExternalVariables);
-                    foreach (var key in externalParameters.Keys.Where(key => !individualTerraformVariables.ContainsKey(key)))
+                    var externalVariables = JsonConvert.DeserializeObject<Dictionary<string, string>>(previousDeployment.ExternalVariables);
+                    log.LogInformation(previousDeployment.ExternalVariables);
+                    foreach (var key in externalVariables.Keys.Where(key => !individualTerraformVariables.ContainsKey(key)))
                     {
-                        individualTerraformVariables.Add(key, externalParameters[key]);
+                        log.LogInformation("add" + key + "->" + externalVariables[key]);
+                        individualTerraformVariables.Add(key, externalVariables[key]);
                     }
                 }
                 withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,

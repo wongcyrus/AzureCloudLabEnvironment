@@ -23,8 +23,10 @@ public static class CallBackFunction
         HttpRequest req,
         ILogger log, ExecutionContext context)
     {
-        log.LogInformation("CallBackFunction function processed a request.");
         string token = req.Query["token"];
+        log.LogInformation($"CallBackFunction function processed a request. token = {token}");
+
+
         var config = new Config(context);
         var deploymentDao = new DeploymentDao(config, log);
 
@@ -98,7 +100,7 @@ Azure Cloud Lab Environment
             }
             return await Task.FromResult<IActionResult>(new OkObjectResult(deployment));
         }
-
+        log.LogInformation(deployment.ToString());
         return await Task.FromResult<IActionResult>(new OkObjectResult("Unknown status!"));
     }
 

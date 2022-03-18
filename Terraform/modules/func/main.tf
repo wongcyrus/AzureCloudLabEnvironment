@@ -121,6 +121,7 @@ resource "null_resource" "function_app_publish" {
   ]
   triggers = {
     publish_code_command = local.publish_code_command
+    build_number = "${timestamp()}"
   }
 }
 
