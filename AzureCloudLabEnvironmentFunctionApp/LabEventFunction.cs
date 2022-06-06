@@ -134,9 +134,16 @@ public class LabEventFunction
 
         var deploymentDao = new DeploymentDao(config, log);
         IWithNextContainerInstance withNextContainerInstance = null;
+        var emailSet = new HashSet<string>();
         for (var index = 0; index < labCredentials.Count; index++)
         {
             var labCredential = labCredentials[index];
+            if (emailSet.Contains(labCredential.Email))
+            {
+                log.LogWarning($"Skip to duplicated email '{labCredential.Email}'");
+                continue;
+            }
+            emailSet.Add(labCredential.Email);
             var deployment = new Deployment
             {
                 Name = lab.Name,
@@ -183,7 +190,7 @@ public class LabEventFunction
                 }
                 deployment.ExternalVariables = JsonConvert.SerializeObject(externalVariables);
                 deploymentDao.Add(deployment);
-
+                
                 withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
                     config, commands, index, labCredential, individualTerraformVariables);
 
@@ -199,12 +206,13 @@ public class LabEventFunction
                     log.LogInformation(previousDeployment.ExternalVariables);
                     foreach (var key in externalVariables.Keys.Where(key => !individualTerraformVariables.ContainsKey(key)))
                     {
-                        log.LogInformation("add" + key + "->" + externalVariables[key]);
+                        log.LogInformation("add " + key + "->" + externalVariables[key]);
                         individualTerraformVariables.Add(key, externalVariables[key]);
                     }
+                    withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
+                        config, commands, index, labCredential, individualTerraformVariables);
                 }
-                withNextContainerInstance = AddContainerInstance(containerGroupWithVolume, withNextContainerInstance,
-                    config, commands, index, labCredential, individualTerraformVariables);
+
             }
         }
 
