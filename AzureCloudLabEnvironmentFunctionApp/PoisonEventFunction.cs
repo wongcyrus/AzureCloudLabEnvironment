@@ -10,7 +10,7 @@ public class PoisonEventFunction
 {
     [FunctionName(nameof(EndEventPoisonEventFunction))]
     public void EndEventPoisonEventFunction(
-        [QueueTrigger("end-event-poison", Connection = nameof(Config.Key.AzureWebJobsStorage))] string message,
+        [QueueTrigger("end-event-poison", Connection = nameof(Config.Key.StorageAccountConnectionString))] string message,
         ILogger log, ExecutionContext context)
     {
         var source = "end-event-poison";
@@ -19,7 +19,7 @@ public class PoisonEventFunction
 
     [FunctionName(nameof(StartEventPoisonEventFunction))]
     public void StartEventPoisonEventFunction(
-        [QueueTrigger("start-event-poison", Connection = nameof(Config.Key.AzureWebJobsStorage))] string message,
+        [QueueTrigger("start-event-poison", Connection = nameof(Config.Key.StorageAccountConnectionString))] string message,
         ILogger log, ExecutionContext context)
     {
         var source = "start-event-poison";

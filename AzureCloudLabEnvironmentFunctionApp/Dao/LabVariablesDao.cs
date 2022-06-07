@@ -26,7 +26,7 @@ namespace AzureCloudLabEnvironment.Dao
         {
             _config = config;
             _logger = logger;
-            _blobServiceClient = new BlobServiceClient(config.GetConfig(Config.Key.AzureWebJobsStorage));
+            _blobServiceClient = new BlobServiceClient(config.GetConfig(Config.Key.StorageAccountConnectionString));
         }
 
         public async Task<bool> LoadVariables(Lab lab)

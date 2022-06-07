@@ -21,7 +21,7 @@ public class LabEventFunction
     [FunctionName(nameof(StartLabEventHandlerFunction))]
     // ReSharper disable once UnusedMember.Global
     public async Task StartLabEventHandlerFunction(
-        [QueueTrigger("start-event", Connection = nameof(Config.Key.AzureWebJobsStorage))] Event ev, ILogger log,
+        [QueueTrigger("start-event", Connection = nameof(Config.Key.StorageAccountConnectionString))] Event ev, ILogger log,
         ExecutionContext executionContext)
     {
         var lab = Lab.FromJson(ev.Context, log);
@@ -33,7 +33,7 @@ public class LabEventFunction
     [Timeout("00:10:00")]
     [FunctionName(nameof(EndLabEventHandlerFunction))]
     public async Task EndLabEventHandlerFunction(
-        [QueueTrigger("end-event", Connection = nameof(Config.Key.AzureWebJobsStorage))] Event ev, ILogger log,
+        [QueueTrigger("end-event", Connection = nameof(Config.Key.StorageAccountConnectionString))] Event ev, ILogger log,
         ExecutionContext executionContext)
     {
         var lab = Lab.FromJson(ev.Context, log);

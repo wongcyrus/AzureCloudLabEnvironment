@@ -43,8 +43,8 @@ public class CalenderPollingFunction
         var newEvents = onGoingEvents.Where(c => onGoingEventDao.IsNew(c)).ToList();
         var endedEvents = onGoingEventDao.GetEndedEvents();
 
-        var startEventQueueClient = new QueueClient(config.GetConfig(Config.Key.AzureWebJobsStorage), "start-event");
-        var endEventQueueClient = new QueueClient(config.GetConfig(Config.Key.AzureWebJobsStorage), "end-event");
+        var startEventQueueClient = new QueueClient(config.GetConfig(Config.Key.StorageAccountConnectionString), "start-event");
+        var endEventQueueClient = new QueueClient(config.GetConfig(Config.Key.StorageAccountConnectionString), "end-event");
 
         string Base64Encode(string plainText)
         {

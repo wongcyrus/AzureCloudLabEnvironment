@@ -7,8 +7,7 @@ namespace AzureCloudLabEnvironment.Helper;
 public class Config
 {
     public enum Key
-    {
-        AzureWebJobsStorage,
+    {        
         CalendarUrl,
         AcrUrl,
         AcrUserName,
