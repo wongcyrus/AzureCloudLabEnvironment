@@ -20,7 +20,7 @@ internal abstract class Dao<T> where T : class, ITableEntity, new()
 
     private TableClient GetTableClient(Config config)
     {
-        var connectionString = config.GetConfig(Config.Key.AzureWebJobsStorage);
+        var connectionString = config.GetConfig(Config.Key.StorageAccountConnectionString);
         var tableClient = new TableClient(
             connectionString,
             GetType().Name.Replace("Dao", ""));

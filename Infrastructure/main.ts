@@ -50,7 +50,7 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
       upper: false,
     })
     const storageAccount = new StorageAccount(this, "StorageAccount", {
-      name: suffix.result,
+      name: prefix.toLocaleLowerCase() + environment.toLocaleLowerCase() + suffix.result,
       location: resourceGroup.location,
       resourceGroupName: resourceGroup.name,
       accountTier: "Standard",

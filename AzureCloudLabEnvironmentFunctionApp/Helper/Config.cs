@@ -22,6 +22,7 @@ public class Config
         Environment,
         StorageAccountName,
         StorageAccountKey,
+        StorageAccountConnectionString,
         Salt
     }
 
