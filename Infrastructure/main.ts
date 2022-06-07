@@ -1,6 +1,6 @@
 import { Construct } from "constructs";
 import { App, TerraformOutput, TerraformStack } from "cdktf";
-import { AzurermProvider, ResourceGroup, StorageAccount, StorageQueue, StorageTable, StorageContainer, StorageShare, RoleDefinition,RoleAssignment } from "cdktf-azure-providers/.gen/providers/azurerm";
+import { AzurermProvider, ResourceGroup, StorageAccount, StorageQueue, StorageTable, StorageContainer, StorageShare, RoleDefinition, RoleAssignment } from "cdktf-azure-providers/.gen/providers/azurerm";
 import { StringResource } from 'cdktf-azure-providers/.gen/providers/random'
 import { AzureFunctionLinuxConstruct, PublishMode } from "azure-common-construct/patterns/AzureFunctionLinuxConstruct";
 import { AzureStaticConstainerConstruct } from "azure-common-construct/patterns/AzureStaticConstainerConstruct";
@@ -24,7 +24,7 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
       location: "EastAsia",
       name: prefix + "ResourceGroup"
     })
-    const terraformResourceGroupName = new ResourceGroup(this, "TerraformResourceGroupName", {
+    const terraformResourceGroup = new ResourceGroup(this, "TerraformResourceGroupName", {
       location: "EastAsia",
       name: prefix + "TerraformResourceGroup"
     })
@@ -57,7 +57,7 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
       accountReplicationType: "LRS"
     })
 
-    const tables = ["OnGoingEvent", "CompletedEvent", "LabCredential", "Deployment", "ErrorLog", "Subscription "];
+    const tables = ["OnGoingEvent", "CompletedEvent", "LabCredential", "Deployment", "ErrorLog", "Subscription"];
     tables.map(t => new StorageTable(this, t + "StorageTable", {
       name: t,
       storageAccountName: storageAccount.name
@@ -79,11 +79,12 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
     new StorageShare(this, "containershare", {
       name: "containershare",
       storageAccountName: storageAccount.name,
-      quota: 500
+      quota: 500,
+      accessTier: "Hot"
     })
-    
+
     const appSettings = {
-      "TerraformResourceGroupName": terraformResourceGroupName.name,
+      "TerraformResourceGroupName": terraformResourceGroup.name,
       "AcrUserName": azureStaticConstainerConstruct.containerRegistry.adminUsername,
       "AcrPassword": azureStaticConstainerConstruct.containerRegistry.adminPassword,
       "AcrUrl": azureStaticConstainerConstruct.containerRegistry.loginServer,
@@ -109,24 +110,23 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
     })
 
     const runAciRoleDefinition = new RoleDefinition(this, "RunAciRoleDefinition", {
-      name: "run_azure_container_instance",
-      scope: terraformResourceGroupName.id,
+      name: prefix + environment + "run_azure_container_instance",
+      scope: terraformResourceGroup.id,
       permissions: [{
         actions: ["Microsoft.Resources/subscriptions/resourcegroups/read",
           "Microsoft.ContainerInstance/containerGroups/read",
           "Microsoft.ContainerInstance/containerGroups/write",
           "Microsoft.ContainerInstance/containerGroups/delete"], notActions: []
       }],
-      assignableScopes:[terraformResourceGroupName.id,]
+      assignableScopes: [terraformResourceGroup.id]
     })
 
-    new RoleAssignment(this,"RoleAssignment",{
-      scope: terraformResourceGroupName.id,
-      roleDefinitionId: runAciRoleDefinition.id,
+    new RoleAssignment(this, "RoleAssignment", {     
+      scope: terraformResourceGroup.id,
+      roleDefinitionId: runAciRoleDefinition.roleDefinitionResourceId,
       principalId: azureFunctionConstruct.functionApp.identity.principalId
     })
 
-   
     new TerraformOutput(this, "FunctionAppHostname", {
       value: azureFunctionConstruct.functionApp.name
     });
