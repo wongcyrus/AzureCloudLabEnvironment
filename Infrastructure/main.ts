@@ -101,12 +101,13 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
     }
 
     const azureFunctionConstruct = new AzureFunctionLinuxConstruct(this, "AzureFunctionConstruct", {
+      functionAppName: `ive-virtual-cloud-lab-${environment}-function-app`,
       environment,
       prefix,
       resourceGroup,
       appSettings,
       vsProjectPath: path.join(__dirname, "..", "AzureCloudLabEnvironmentFunctionApp/"),
-      publishMode: PublishMode.AfterCodeChange
+      publishMode: PublishMode.Always
     })
 
     const runAciRoleDefinition = new RoleDefinition(this, "RunAciRoleDefinition", {

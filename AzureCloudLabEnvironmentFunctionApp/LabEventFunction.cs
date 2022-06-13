@@ -241,7 +241,7 @@ public class LabEventFunction
 
         IWithNextContainerInstance SetContainer(IContainerInstanceDefinitionBlank<IWithNextContainerInstance> container)
         {
-            return container.WithImage(config.GetConfig(Config.Key.AcrUrl) + "/terraformazurecli:latest")
+            return container.WithImage(config.GetConfig(Config.Key.AcrUrl) + "/terraform-azure-cli:latest")
                 .WithExternalTcpPort(80 + index)
                 .WithMemorySizeInGB(0.5)
                 .WithCpuCoreCount(0.25)

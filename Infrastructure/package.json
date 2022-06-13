@@ -20,10 +20,10 @@
     "node": ">=14.0"
   },
   "dependencies": {
-    "azure-common-construct": "^0.0.31",
-    "cdktf": "^0.11.1",
-    "cdktf-azure-providers": "^0.0.2",
-    "cdktf-cli": "^0.11.1",
+    "azure-common-construct": "^0.0.36",
+    "cdktf": "^0.11.2",
+    "cdktf-azure-providers": "^0.0.4",
+    "cdktf-cli": "^0.11.2",
     "constructs": "^10.1.24",
     "dotenv": "^16.0.1"
   },
