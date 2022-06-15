@@ -13,6 +13,7 @@ public class Config
         AcrUserName,
         AcrPassword,
         TerraformResourceGroupName,
+        CommunicationServiceConnectionString,
         EmailSmtp,
         EmailUserName,
         EmailPassword,

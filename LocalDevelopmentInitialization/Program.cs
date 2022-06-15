@@ -1,35 +1,31 @@
 ﻿// See https://aka.ms/new-console-template for more information
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using Azure.Storage.Blobs;
+using Azure.Storage.Queues;
+using Azure.Data.Tables;
 
 
 Console.WriteLine("Create Local Azure Storage Account resources.");
+var tableServiceClient = new TableServiceClient(
+    new Uri("UseDevelopmentStorage=true"));
 
-CloudStorageAccount storageAcc = CloudStorageAccount.Parse("UseDevelopmentStorage=true");
-
-CloudTableClient cloudTableClient = storageAcc.CreateCloudTableClient();
 var tables = new[] { "CompletedEvent", "OnGoingEvent", "Subscription", "LabCredential", "Deployment", "ErrorLog" };
 foreach (var tableName in tables)
 {
-    var table = cloudTableClient.GetTableReference(tableName);
-    await table.CreateIfNotExistsAsync();
+    tableServiceClient.CreateTableIfNotExists(tableName);
 }
 
-var cloudQueueClient = storageAcc.CreateCloudQueueClient();
+var queueServiceClient = new QueueServiceClient(new Uri("UseDevelopmentStorage=true"));
 var queues = new[] { "start-event", "end-event" };
 foreach (var queueName in queues)
 {
-    var queue = cloudQueueClient.GetQueueReference(queueName);
-    await queue.CreateIfNotExistsAsync();
+    queueServiceClient.CreateQueue(queueName);
 }
 
-var cloudBlobClient = storageAcc.CreateCloudBlobClient();
 var blobs = new[] { "lab-variables" };
-
+var BblobServiceClient = new BlobServiceClient(new Uri("UseDevelopmentStorage=true"));
 foreach (var containerName in blobs)
 {
-    var container = cloudBlobClient.GetContainerReference(containerName);
-    await container.CreateIfNotExistsAsync();
+    BblobServiceClient.CreateBlobContainer(containerName);
 }
 Console.WriteLine("Created Local Azure Storage Account resources.");
 

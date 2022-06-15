@@ -1,6 +1,6 @@
 import { Construct } from "constructs";
 import { App, TerraformOutput, TerraformStack } from "cdktf";
-import { AzurermProvider, ResourceGroup, StorageAccount, StorageQueue, StorageTable, StorageContainer, StorageShare, RoleDefinition, RoleAssignment } from "cdktf-azure-providers/.gen/providers/azurerm";
+import { AzurermProvider, ResourceGroup, StorageAccount, StorageQueue, StorageTable, StorageContainer, StorageShare, RoleDefinition, RoleAssignment} from "cdktf-azure-providers/.gen/providers/azurerm";
 import { StringResource } from 'cdktf-azure-providers/.gen/providers/random'
 import { AzureFunctionLinuxConstruct, PublishMode } from "azure-common-construct/patterns/AzureFunctionLinuxConstruct";
 import { AzureStaticConstainerConstruct } from "azure-common-construct/patterns/AzureStaticConstainerConstruct";
@@ -83,13 +83,16 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
       accessTier: "Hot"
     })
 
+    
+
     const appSettings = {
       "TerraformResourceGroupName": terraformResourceGroup.name,
       "AcrUserName": azureStaticConstainerConstruct.containerRegistry.adminUsername,
       "AcrPassword": azureStaticConstainerConstruct.containerRegistry.adminPassword,
       "AcrUrl": azureStaticConstainerConstruct.containerRegistry.loginServer,
-      "CalendarUrl": process.env.CALENDAR_URL!,
+      "CalendarUrl": process.env.CALENDAR_URL!,      
       "EmailSmtp": process.env.EMAIL_SMTP!,
+      "CommunicationServiceConnectionString":process.env.COMMUNICATION_SERVICE_CONNECTION_STRING!,
       "EmailUserName": process.env.EMAIL_USERNAME!,
       "EmailPassword": process.env.EMAIL_PASSWORD!,
       "EmailFromAddress": process.env.EMAIL_FROM_ADDRESS!,
@@ -107,7 +110,7 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
       resourceGroup,
       appSettings,
       vsProjectPath: path.join(__dirname, "..", "AzureCloudLabEnvironmentFunctionApp/"),
-      publishMode: PublishMode.Always
+      publishMode: PublishMode.AfterCodeChange
     })
 
     const runAciRoleDefinition = new RoleDefinition(this, "RunAciRoleDefinition", {
@@ -122,7 +125,7 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
       assignableScopes: [terraformResourceGroup.id]
     })
 
-    new RoleAssignment(this, "RoleAssignment", {     
+    new RoleAssignment(this, "RoleAssignment", {
       scope: terraformResourceGroup.id,
       roleDefinitionId: runAciRoleDefinition.roleDefinitionResourceId,
       principalId: azureFunctionConstruct.functionApp.identity.principalId

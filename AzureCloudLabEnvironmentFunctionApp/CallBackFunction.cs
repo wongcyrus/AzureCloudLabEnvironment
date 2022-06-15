@@ -58,7 +58,7 @@ Azure Cloud Lab Environment
                     Body = body
                 };
                 var emailClient = new Email(config, log);
-                emailClient.Send(emailMessage, new[] { Email.StringToAttachment(output, "output.txt", "text/plain") });
+                emailClient.Send(emailMessage, new[] { new Attachment() { Content = output, Name = "output.txt", MediaType = "text/plain" } });
                 log.LogInformation(
                     $"Sent CREATED Email to {deployment.Email} -> {deployment.Name} - {deployment.RepeatedTimes}");
             }
