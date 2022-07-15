@@ -2,11 +2,12 @@ import { Construct } from "constructs";
 import { App, TerraformOutput, TerraformStack } from "cdktf";
 import { AzurermProvider, ResourceGroup, StorageAccount, StorageQueue, StorageTable, StorageContainer, StorageShare, RoleDefinition, RoleAssignment} from "cdktf-azure-providers/.gen/providers/azurerm";
 import { StringResource } from 'cdktf-azure-providers/.gen/providers/random'
-import { AzureFunctionLinuxConstruct, PublishMode } from "azure-common-construct/patterns/AzureFunctionLinuxConstruct";
+import { AzureFunctionLinuxConstruct } from "azure-common-construct/patterns/AzureFunctionLinuxConstruct";
 import { AzureStaticConstainerConstruct } from "azure-common-construct/patterns/AzureStaticConstainerConstruct";
-
+import { PublishMode } from "azure-common-construct/patterns/PublisherConstruct";
 import * as path from "path";
 import * as dotenv from 'dotenv';
+
 dotenv.config({ path: __dirname + '/.env' });
 
 class AzureCloudLabEnvironmentStack extends TerraformStack {
