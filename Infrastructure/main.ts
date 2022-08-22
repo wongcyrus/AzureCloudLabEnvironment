@@ -1,12 +1,12 @@
-import { Construct } from "constructs";
-import { App, TerraformOutput, TerraformStack } from "cdktf";
-import { AzurermProvider, ResourceGroup, StorageAccount, StorageQueue, StorageTable, StorageContainer, StorageShare, RoleDefinition, RoleAssignment} from "cdktf-azure-providers/.gen/providers/azurerm";
-import { StringResource } from 'cdktf-azure-providers/.gen/providers/random'
 import { AzureFunctionLinuxConstruct } from "azure-common-construct/patterns/AzureFunctionLinuxConstruct";
 import { AzureStaticConstainerConstruct } from "azure-common-construct/patterns/AzureStaticConstainerConstruct";
 import { PublishMode } from "azure-common-construct/patterns/PublisherConstruct";
-import * as path from "path";
+import { App, TerraformOutput, TerraformStack } from "cdktf";
+import { AzurermProvider, ResourceGroup, RoleAssignment, RoleDefinition, StorageAccount, StorageContainer, StorageQueue, StorageShare, StorageTable } from "cdktf-azure-providers/.gen/providers/azurerm";
+import { StringResource } from 'cdktf-azure-providers/.gen/providers/random';
+import { Construct } from "constructs";
 import * as dotenv from 'dotenv';
+import * as path from "path";
 
 dotenv.config({ path: __dirname + '/.env' });
 
@@ -84,16 +84,14 @@ class AzureCloudLabEnvironmentStack extends TerraformStack {
       accessTier: "Hot"
     })
 
-    
-
     const appSettings = {
       "TerraformResourceGroupName": terraformResourceGroup.name,
       "AcrUserName": azureStaticConstainerConstruct.containerRegistry.adminUsername,
       "AcrPassword": azureStaticConstainerConstruct.containerRegistry.adminPassword,
       "AcrUrl": azureStaticConstainerConstruct.containerRegistry.loginServer,
-      "CalendarUrl": process.env.CALENDAR_URL!,      
+      "CalendarUrl": process.env.CALENDAR_URL!,
       "EmailSmtp": process.env.EMAIL_SMTP!,
-      "CommunicationServiceConnectionString":process.env.COMMUNICATION_SERVICE_CONNECTION_STRING!,
+      "CommunicationServiceConnectionString": process.env.COMMUNICATION_SERVICE_CONNECTION_STRING!,
       "EmailUserName": process.env.EMAIL_USERNAME!,
       "EmailPassword": process.env.EMAIL_PASSWORD!,
       "EmailFromAddress": process.env.EMAIL_FROM_ADDRESS!,
